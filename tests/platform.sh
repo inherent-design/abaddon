@@ -257,3 +257,57 @@ run_test "Suggest tool installation provides guidance" test_platform_suggest_too
 
 run_test "Show tool status brief" test_platform_show_tool_status_brief
 run_test "Show tool status detailed" test_platform_show_tool_status_detailed
+
+# Test state management functions
+test_platform_state_reset() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    # Set some state
+    ABADDON_PLATFORM_STATUS="error"
+    ABADDON_PLATFORM_ERROR_MESSAGE="test error"
+    # Reset and check
+    reset_platform_state
+    [[ -z "${ABADDON_PLATFORM_STATUS}" ]] && [[ -z "${ABADDON_PLATFORM_ERROR_MESSAGE}" ]]
+}
+
+test_platform_set_error_state() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    set_platform_error "test error"
+    [[ "${ABADDON_PLATFORM_STATUS}" == "error" ]] && [[ "${ABADDON_PLATFORM_ERROR_MESSAGE}" == "test error" ]]
+}
+
+test_platform_set_success_state() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    set_platform_success
+    [[ "${ABADDON_PLATFORM_STATUS}" == "success" ]] && [[ -z "${ABADDON_PLATFORM_ERROR_MESSAGE}" ]]
+}
+
+test_platform_state_accessors() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    # Test tool availability to set state
+    check_tool_availability bash >/dev/null 2>&1
+    [[ -n "$(get_platform_tool_counts)" ]] && [[ "$(get_platform_status)" == "success" ]]
+}
+
+test_platform_success_failure_helpers() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    set_platform_success
+    platform_succeeded && ! platform_failed
+}
+
+test_platform_module_validation() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    platform_validate
+}
+
+run_test "Platform state reset clears all state variables" test_platform_state_reset
+run_test "Platform set error state stores error information" test_platform_set_error_state
+run_test "Platform set success state clears error information" test_platform_set_success_state
+run_test "Platform state accessors return correct values" test_platform_state_accessors
+run_test "Platform success/failure helpers work correctly" test_platform_success_failure_helpers
+run_test "Platform module validation passes for complete module" test_platform_module_validation

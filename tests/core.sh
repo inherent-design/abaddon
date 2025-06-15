@@ -1,5 +1,34 @@
-# Core module tests
+# Core Module Tests
 # Test functions for abaddon-core.sh
+
+# ============================================================================
+# Core Test Lifecycle Hooks
+# ============================================================================
+
+# Core test setup
+core_test_setup() {
+    declare -g ABADDON_TESTS_CORE_MODULE_LOADED=""
+    declare -g ABADDON_TESTS_CORE_LOGGING_VALIDATED=""
+    declare -g ABADDON_TESTS_CORE_PLATFORM_VALIDATED=""
+    declare -g ABADDON_TESTS_CORE_STATE_VALIDATED=""
+}
+
+# Core test teardown
+core_test_teardown() {
+    unset ABADDON_TESTS_CORE_MODULE_LOADED
+    unset ABADDON_TESTS_CORE_LOGGING_VALIDATED
+    unset ABADDON_TESTS_CORE_PLATFORM_VALIDATED
+    unset ABADDON_TESTS_CORE_STATE_VALIDATED
+}
+
+# Core test isolation
+core_test_isolate() {
+    unset ABADDON_CORE_LOADED
+}
+
+# ============================================================================
+# Module Loading Tests
+# ============================================================================
 
 # Test module loading
 test_core_module_loads() {
@@ -18,7 +47,7 @@ test_core_module_guards_double_load() {
 # Test logging functions
 test_core_log_info_output() {
     source "$(get_module_path core)"
-    log_info "test message"
+    log_info "test message" 2>&1
 }
 
 test_core_log_error_output() {
@@ -28,7 +57,7 @@ test_core_log_error_output() {
 
 test_core_log_success_output() {
     source "$(get_module_path core)"
-    log_success "test success"
+    log_success "test success" 2>&1
 }
 
 test_core_log_warn_output() {
@@ -150,41 +179,106 @@ test_core_measure_execution_failure() {
     measure_execution "test_command" false
 }
 
-# Register all core tests
-run_test "Core module loads successfully" test_core_module_loads
-run_test "Core module guards against double loading" test_core_module_guards_double_load
+# Test state management functions
+test_core_state_reset() {
+    source "$(get_module_path core)"
+    # Set some state
+    ABADDON_CORE_PLATFORM="test"
+    ABADDON_CORE_STATUS="error"
+    # Reset and check
+    reset_core_state
+    [[ -z "${ABADDON_CORE_PLATFORM}" ]] && [[ -z "${ABADDON_CORE_STATUS}" ]]
+}
 
-run_test_with_output "Log info includes message" test_core_log_info_output "test message" contains
-run_test_with_output "Log error includes message" test_core_log_error_output "test error" contains
-run_test_with_output "Log success includes message" test_core_log_success_output "test success" contains
-run_test_with_output "Log warn includes message" test_core_log_warn_output "test warning" contains
+test_core_set_error_state() {
+    source "$(get_module_path core)"
+    set_core_error "test error"
+    [[ "${ABADDON_CORE_STATUS}" == "error" ]] && [[ "${ABADDON_CORE_ERROR_MESSAGE}" == "test error" ]]
+}
 
-run_test_with_output "Platform detection returns valid platform" test_core_detect_platform_returns_value "^(macos|linux_|windows|unknown)$" regex
-run_test "Platform capabilities returns capability list" test_core_platform_capabilities_returns_list
+test_core_set_success_state() {
+    source "$(get_module_path core)"
+    set_core_success
+    [[ "${ABADDON_CORE_STATUS}" == "success" ]] && [[ -z "${ABADDON_CORE_ERROR_MESSAGE}" ]]
+}
 
-run_test_with_output "Normalize path expands tilde" test_core_normalize_path_home "$HOME/test" exact
-run_test "Normalize path handles relative paths" test_core_normalize_path_relative
+test_core_state_accessors() {
+    source "$(get_module_path core)"
+    detect_platform >/dev/null
+    [[ -n "$(get_core_platform)" ]] && [[ "$(get_core_status)" == "success" ]]
+}
 
-run_test_with_output "Safe arithmetic: 2 + 2 = 4" test_core_safe_arithmetic_addition "4" exact
-run_test_with_output "Safe arithmetic: 6 * 7 = 42" test_core_safe_arithmetic_multiplication "42" exact
-run_test "Safe arithmetic handles invalid expressions" test_core_safe_arithmetic_invalid_expression false
+test_core_success_failure_helpers() {
+    source "$(get_module_path core)"
+    set_core_success
+    core_succeeded && ! core_failed
+}
 
-run_test_with_output "Trim whitespace from both ends" test_core_trim_whitespace_both_ends "hello world" exact
-run_test_with_output "Trim whitespace handles empty string" test_core_trim_whitespace_empty_string "" exact
+test_core_module_validation() {
+    source "$(get_module_path core)"
+    core_validate
+}
 
-run_test_with_output "Version compare equal versions" test_core_version_compare_equal "eq|le" regex
-run_test_with_output "Version compare 1.0.0 < 2.0.0" test_core_version_compare_less "le|lt" regex
+# ============================================================================
+# Test Registration - Called by Test Runner
+# ============================================================================
 
-run_test "Handle error with context" test_core_handle_error_basic false
+register_core_tests() {
+    # Module loading tests
+    run_test "Core module loads successfully" test_core_module_loads
+    run_test "Core module guards against double loading" test_core_module_guards_double_load
 
-run_test "Require env var when it exists" test_core_require_env_var_exists
-run_test "Require env var fails when missing" test_core_require_env_var_missing false
+    # Logging tests
+    run_test_with_output "Log info includes message" test_core_log_info_output "test message" contains
+    run_test_with_output "Log error includes message" test_core_log_error_output "test error" contains
+    run_test_with_output "Log success includes message" test_core_log_success_output "test success" contains
+    run_test_with_output "Log warn includes message" test_core_log_warn_output "test warning" contains
 
-run_test "Ensure directory creates new directory" test_core_ensure_directory_create
-run_test "Ensure directory handles existing directory" test_core_ensure_directory_existing
+    # Platform detection tests
+    run_test_with_output "Platform detection returns valid platform" test_core_detect_platform_returns_value "^(macos|linux_|windows|unknown)$" regex
+    run_test "Platform capabilities returns capability list" test_core_platform_capabilities_returns_list
 
-run_test "Validate module with existing functions" test_core_validate_module_success
-run_test "Validate module fails with missing function" test_core_validate_module_missing_function false
+    # Path operation tests
+    run_test_with_output "Normalize path expands tilde" test_core_normalize_path_home "$HOME/test" exact
+    run_test "Normalize path handles relative paths" test_core_normalize_path_relative
 
-run_test "Measure execution tracks successful commands" test_core_measure_execution_success
-run_test "Measure execution handles command failure" test_core_measure_execution_failure false
+    # Arithmetic tests
+    run_test_with_output "Safe arithmetic: 2 + 2 = 4" test_core_safe_arithmetic_addition "4" exact
+    run_test_with_output "Safe arithmetic: 6 * 7 = 42" test_core_safe_arithmetic_multiplication "42" exact
+    run_test "Safe arithmetic handles invalid expressions" test_core_safe_arithmetic_invalid_expression false
+
+    # String manipulation tests
+    run_test_with_output "Trim whitespace from both ends" test_core_trim_whitespace_both_ends "hello world" exact
+    run_test_with_output "Trim whitespace handles empty string" test_core_trim_whitespace_empty_string "" exact
+
+    # Version comparison tests
+    run_test_with_output "Version compare equal versions" test_core_version_compare_equal "eq|le" regex
+    run_test_with_output "Version compare 1.0.0 < 2.0.0" test_core_version_compare_less "le|lt" regex
+
+    # Error handling tests
+    run_test "Handle error with context" test_core_handle_error_basic false
+
+    # Environment validation tests
+    run_test "Require env var when it exists" test_core_require_env_var_exists
+    run_test "Require env var fails when missing" test_core_require_env_var_missing false
+
+    # File operation tests
+    run_test "Ensure directory creates new directory" test_core_ensure_directory_create
+    run_test "Ensure directory handles existing directory" test_core_ensure_directory_existing
+
+    # Module validation tests
+    run_test "Validate module with existing functions" test_core_validate_module_success
+    run_test "Validate module fails with missing function" test_core_validate_module_missing_function false
+
+    # Performance measurement tests
+    run_test "Measure execution tracks successful commands" test_core_measure_execution_success
+    run_test "Measure execution handles command failure" test_core_measure_execution_failure false
+
+    # State management tests
+    run_test "State reset clears all state variables" test_core_state_reset
+    run_test "Set error state stores error information" test_core_set_error_state
+    run_test "Set success state clears error information" test_core_set_success_state
+    run_test "State accessors return correct values" test_core_state_accessors
+    run_test "Success/failure helpers work correctly" test_core_success_failure_helpers
+    run_test "Module validation passes for complete module" test_core_module_validation
+}

@@ -2,6 +2,8 @@
 # Abaddon Platform - Opinionated tool management and promotion system
 # Fail-fast tool validation with clear installation guidance
 
+set -u  # Catch undefined variables (linting-like behavior)
+
 # Guard against multiple loads
 [[ -n "${ABADDON_PLATFORM_LOADED:-}" ]] && return 0
 readonly ABADDON_PLATFORM_LOADED=1
@@ -12,9 +14,20 @@ readonly ABADDON_PLATFORM_LOADED=1
     return 1
 }
 
+# Platform module state variables (following framework pattern)
+declare -g ABADDON_PLATFORM_STATUS=""
+declare -g ABADDON_PLATFORM_ERROR_MESSAGE=""
+declare -g ABADDON_PLATFORM_TOOL_COUNTS=""
+declare -g ABADDON_PLATFORM_AVAILABLE_TOOLS=""
+declare -g ABADDON_PLATFORM_MISSING_TOOLS=""
+
+# Platform module constants
+readonly ABADDON_PLATFORM_SUCCESS="success"
+readonly ABADDON_PLATFORM_ERROR="error"
+
 # Modern tool registry - detects tools regardless of installation source
 # Format: "tool_name:common_path:description:suggested_source"
-declare -A MODERN_TOOLS=(
+declare -A ABADDON_PLATFORM_MODERN_TOOLS=(
     ["fd"]="/opt/homebrew/bin/fd:Fast file finding:distro packages or brew"
     ["rg"]="/opt/homebrew/bin/rg:Fast text search:distro packages or brew"
     ["eza"]="/opt/homebrew/bin/eza:Modern file listing:cargo/brew/distro packages"
@@ -25,7 +38,7 @@ declare -A MODERN_TOOLS=(
 )
 
 # Platform-specific tools that are optional but recommended
-declare -A PLATFORM_TOOLS=(
+declare -A ABADDON_PLATFORM_TOOLS=(
     # macOS specific
     ["networksetup"]="/usr/sbin/networksetup:Network configuration:Built-in macOS tool"
     ["brew"]="/opt/homebrew/bin/brew:Package manager:See https://brew.sh"
@@ -33,11 +46,10 @@ declare -A PLATFORM_TOOLS=(
     # Cross-platform utilities
     ["git"]="/usr/bin/git:Version control:Usually pre-installed"
     ["curl"]="/usr/bin/curl:HTTP client:Usually pre-installed"
-    ["jq"]="/opt/homebrew/bin/jq:JSON processor:See modern tools suggestions"
 )
 
 # Tool capability definitions
-declare -A TOOL_CAPABILITIES=(
+declare -A ABADDON_PLATFORM_TOOL_CAPABILITIES=(
     ["fd"]="parallel_search,type_filtering,ignore_patterns,json_output"
     ["rg"]="parallel_search,json_output,type_filtering,context_lines,multiline"
     ["eza"]="rich_listing,json_output,git_status,tree_view,icons,colors"
@@ -47,15 +59,38 @@ declare -A TOOL_CAPABILITIES=(
     ["yq"]="yaml_parsing,json_conversion,filtering,transformation"
 )
 
+# Reset platform module state
+reset_platform_state() {
+    ABADDON_PLATFORM_STATUS=""
+    ABADDON_PLATFORM_ERROR_MESSAGE=""
+    ABADDON_PLATFORM_TOOL_COUNTS=""
+    ABADDON_PLATFORM_AVAILABLE_TOOLS=""
+    ABADDON_PLATFORM_MISSING_TOOLS=""
+}
+
+# Set platform error state
+set_platform_error() {
+    local error_message="$1"
+    ABADDON_PLATFORM_STATUS="$ABADDON_PLATFORM_ERROR"
+    ABADDON_PLATFORM_ERROR_MESSAGE="$error_message"
+    log_error "Platform error: $error_message"
+}
+
+# Set platform success state
+set_platform_success() {
+    ABADDON_PLATFORM_STATUS="$ABADDON_PLATFORM_SUCCESS"
+    ABADDON_PLATFORM_ERROR_MESSAGE=""
+}
+
 # Get tool information
 get_tool_info() {
     local tool="$1"
     local info_type="${2:-all}"
     
-    if [[ -n "${MODERN_TOOLS[$tool]:-}" ]]; then
-        IFS=':' read -r expected_path description install_cmd <<<"${MODERN_TOOLS[$tool]}"
-    elif [[ -n "${PLATFORM_TOOLS[$tool]:-}" ]]; then
-        IFS=':' read -r expected_path description install_cmd <<<"${PLATFORM_TOOLS[$tool]}"
+    if [[ -n "${ABADDON_PLATFORM_MODERN_TOOLS[$tool]:-}" ]]; then
+        IFS=':' read -r expected_path description install_cmd <<<"${ABADDON_PLATFORM_MODERN_TOOLS[$tool]}"
+    elif [[ -n "${ABADDON_PLATFORM_TOOLS[$tool]:-}" ]]; then
+        IFS=':' read -r expected_path description install_cmd <<<"${ABADDON_PLATFORM_TOOLS[$tool]}"
     else
         log_warn "Unknown tool: $tool"
         return 1
@@ -65,12 +100,12 @@ get_tool_info() {
         path) echo "$expected_path" ;;
         description) echo "$description" ;;
         install) echo "$install_cmd" ;;
-        capabilities) echo "${TOOL_CAPABILITIES[$tool]:-basic}" ;;
+        capabilities) echo "${ABADDON_PLATFORM_TOOL_CAPABILITIES[$tool]:-basic}" ;;
         all) 
             echo "Path: $expected_path"
             echo "Description: $description"
             echo "Install: $install_cmd"
-            echo "Capabilities: ${TOOL_CAPABILITIES[$tool]:-basic}"
+            echo "Capabilities: ${ABADDON_PLATFORM_TOOL_CAPABILITIES[$tool]:-basic}"
             ;;
         *) 
             log_error "Invalid info type: $info_type"
@@ -133,8 +168,9 @@ check_tool_availability() {
     local required_tools=("${@:-fd rg eza gdu}")
     local missing_tools=()
     local working_tools=()
-    local suggest_only="${ABLADDON_SUGGEST_ONLY:-false}"
+    local suggest_only="${ABADDON_SUGGEST_ONLY:-false}"
     
+    reset_platform_state
     log_info "Checking modern tool availability..."
     
     for tool in "${required_tools[@]}"; do
@@ -151,29 +187,33 @@ check_tool_availability() {
         fi
     done
     
+    # Store state
+    ABADDON_PLATFORM_TOOL_COUNTS="${#working_tools[@]}/${#required_tools[@]}"
+    ABADDON_PLATFORM_AVAILABLE_TOOLS="${working_tools[*]}"
+    ABADDON_PLATFORM_MISSING_TOOLS="${missing_tools[*]}"
+    
     if [[ ${#missing_tools[@]} -gt 0 ]]; then
         if [[ "$suggest_only" == "true" ]]; then
             log_info "Found ${#working_tools[@]}/${#required_tools[@]} modern tools"
             suggest_tool_installation "${missing_tools[@]}"
+            set_platform_success
             return 0  # Don't fail in suggestion mode
         else
             echo
             log_info "Modern tools enhance performance but are optional"
             log_info "Available: ${#working_tools[@]}/${#required_tools[@]} tools"
             suggest_tool_installation "${missing_tools[@]}"
+            set_platform_error "Missing tools: ${missing_tools[*]}"
             return 1  # Indicate missing tools for stricter callers
         fi
     fi
     
     log_success "All modern tools available (${#working_tools[@]}/${#required_tools[@]} tools)"
+    set_platform_success
     return 0
 }
 
-# Backward compatibility alias (deprecated - use check_tool_availability)
-promote_required_tools() {
-    log_warn "promote_required_tools is deprecated - use check_tool_availability"
-    check_tool_availability "$@"
-}
+# Backward compatibility alias removed - use check_tool_availability directly
 
 # Check tool capabilities
 has_capability() {
@@ -241,6 +281,27 @@ get_best_tool() {
         json_processing)
             if check_tool "jq" true; then
                 echo "jq"
+            else
+                echo "none"
+            fi
+            ;;
+        yaml_processing)
+            if check_tool "yq" true; then
+                echo "yq"
+            else
+                echo "none"
+            fi
+            ;;
+        toml_processing)
+            if check_tool "tq" true; then
+                echo "tq"
+            else
+                echo "none"
+            fi
+            ;;
+        xml_processing)
+            if check_tool "xq" true; then
+                echo "xq"
             else
                 echo "none"
             fi
@@ -386,13 +447,14 @@ validate_development_environment() {
 }
 
 # Show comprehensive tool status
+# Note: This is user-requested display output, so it goes to stdout (not stderr logging)
 show_tool_status() {
     local show_all="${1:-false}"
     
-    echo -e "${BOLD}=== Modern Tool Status ===${NC}\n"
+    echo -e "${ABADDON_CORE_COLOR_BOLD}=== Modern Tool Status ===${ABADDON_CORE_COLOR_NC}\n"
     
     # Core modern tools
-    echo -e "${CYAN}Core Modern Tools:${NC}"
+    echo -e "${ABADDON_CORE_COLOR_CYAN}Core Modern Tools:${ABADDON_CORE_COLOR_NC}"
     for tool in fd rg eza gdu; do
         if check_tool "$tool" true; then
             local version capabilities
@@ -409,7 +471,7 @@ show_tool_status() {
     done
     
     # Optional tools
-    echo -e "\n${CYAN}Optional Tools:${NC}"
+    echo -e "\n${ABADDON_CORE_COLOR_CYAN}Optional Tools:${ABADDON_CORE_COLOR_NC}"
     for tool in bat jq yq; do
         if check_tool "$tool" true; then
             local version
@@ -422,7 +484,7 @@ show_tool_status() {
     
     # Platform tools
     if [[ "$show_all" == "true" ]]; then
-        echo -e "\n${CYAN}Platform Tools:${NC}"
+        echo -e "\n${ABADDON_CORE_COLOR_CYAN}Platform Tools:${ABADDON_CORE_COLOR_NC}"
         local platform
         platform=$(detect_platform)
         case "$platform" in
@@ -448,4 +510,55 @@ show_tool_status() {
     fi
 }
 
-log_debug "Abaddon Platform module loaded successfully"
+# State access functions (following framework pattern)
+get_platform_status() { echo "$ABADDON_PLATFORM_STATUS"; }
+get_platform_error_message() { echo "$ABADDON_PLATFORM_ERROR_MESSAGE"; }
+get_platform_tool_counts() { echo "$ABADDON_PLATFORM_TOOL_COUNTS"; }
+get_platform_available_tools() { echo "$ABADDON_PLATFORM_AVAILABLE_TOOLS"; }
+get_platform_missing_tools() { echo "$ABADDON_PLATFORM_MISSING_TOOLS"; }
+
+# Check if last operation succeeded
+platform_succeeded() { [[ "$ABADDON_PLATFORM_STATUS" == "$ABADDON_PLATFORM_SUCCESS" ]]; }
+platform_failed() { [[ "$ABADDON_PLATFORM_STATUS" == "$ABADDON_PLATFORM_ERROR" ]]; }
+
+# Module validation function (required by framework)
+platform_validate() {
+    local errors=0
+    
+    # Check required functions exist
+    local required_functions=(
+        "check_tool" "get_tool_info" "check_tool_availability"
+        "set_platform_error" "set_platform_success" "reset_platform_state"
+    )
+    
+    for func in "${required_functions[@]}"; do
+        if ! declare -F "$func" >/dev/null; then
+            log_error "Missing function: $func"
+            ((errors++))
+        fi
+    done
+    
+    # Check state variables exist
+    local required_vars=(
+        "ABADDON_PLATFORM_STATUS" "ABADDON_PLATFORM_ERROR_MESSAGE"
+        "ABADDON_PLATFORM_TOOL_COUNTS" "ABADDON_PLATFORM_AVAILABLE_TOOLS"
+        "ABADDON_PLATFORM_MISSING_TOOLS"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            log_error "Missing state variable: $var"
+            ((errors++))
+        fi
+    done
+    
+    # Check dependency is loaded
+    if [[ -z "${ABADDON_CORE_LOADED:-}" ]]; then
+        log_error "Core dependency not loaded"
+        ((errors++))
+    fi
+    
+    return $errors
+}
+
+log_debug "Abaddon Platform module loaded successfully with standardized state management"
