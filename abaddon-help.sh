@@ -1,7 +1,9 @@
-#!/bin/bash
-# abladdon-help.sh - Language-Agnostic Help System
+#!/usr/bin/env bash
+# abaddon-help.sh - Language-Agnostic Help System
 # Version: 1.0.0  
 # Purpose: i18n-ready help using kv.sh for string token retrieval
+
+set -u  # Catch undefined variables (linting-like behavior)
 
 # Load guard
 [[ -n "${ABADDON_HELP_LOADED:-}" ]] && return 0
@@ -24,10 +26,10 @@ readonly ABADDON_HELP_LOADED=1
 }
 
 # State variables - NO stdout pollution
-declare -g HELP_STATE_TEXT=""
-declare -g HELP_STATE_STATUS=""
-declare -g HELP_STATE_LANGUAGE=""
-declare -g HELP_STATE_TOKEN=""
+declare -g ABADDON_HELP_TEXT=""
+declare -g ABADDON_HELP_STATUS=""
+declare -g ABADDON_HELP_LANGUAGE=""
+declare -g ABADDON_HELP_TOKEN=""
 
 # Configuration
 declare -g HELP_DEFAULT_LANGUAGE="en"
@@ -94,7 +96,7 @@ resolve_help_token() {
         return 1
     fi
     
-    HELP_STATE_TOKEN="$i18n_token"
+    ABADDON_HELP_TOKEN="$i18n_token"
     return 0
 }
 
@@ -114,14 +116,14 @@ get_help_text() {
     local language="${2:-$HELP_DEFAULT_LANGUAGE}"
     
     # Clear previous state
-    HELP_STATE_TEXT=""
-    HELP_STATE_STATUS=""
-    HELP_STATE_LANGUAGE="$language"
-    HELP_STATE_TOKEN=""
+    ABADDON_HELP_TEXT=""
+    ABADDON_HELP_STATUS=""
+    ABADDON_HELP_LANGUAGE="$language"
+    ABADDON_HELP_TOKEN=""
     
     # Input validation
     if [[ -z "$feature_token" ]]; then
-        HELP_STATE_STATUS="error"
+        ABADDON_HELP_STATUS="error"
         log_error "get_help_text requires feature token"
         return 1
     fi
@@ -133,7 +135,7 @@ get_help_text() {
     
     # Resolve feature token to i18n path
     if ! resolve_help_token "$feature_token" "$language"; then
-        HELP_STATE_STATUS="error"
+        ABADDON_HELP_STATUS="error"
         return 1
     fi
     
@@ -142,7 +144,7 @@ get_help_text() {
     translation_file=$(get_translation_file "$language")
     
     if [[ ! -f "$translation_file" ]]; then
-        HELP_STATE_STATUS="no_translation"
+        ABADDON_HELP_STATUS="no_translation"
         log_warning "Translation file not found: $translation_file"
         
         # Fallback to default language if different
@@ -156,22 +158,22 @@ get_help_text() {
     fi
     
     # Use kv.sh to retrieve the text
-    get_config_value "$HELP_STATE_TOKEN" "$translation_file"
+    get_config_value "$ABADDON_HELP_TOKEN" "$translation_file"
     
     case "$KV_STATE_STATUS" in
         success)
-            HELP_STATE_TEXT="$KV_STATE_VALUE"
-            HELP_STATE_STATUS="success"
-            log_debug "Retrieved help text for '$feature_token': ${HELP_STATE_TEXT:0:50}..."
+            ABADDON_HELP_TEXT="$KV_STATE_VALUE"
+            ABADDON_HELP_STATUS="success"
+            log_debug "Retrieved help text for '$feature_token': ${ABADDON_HELP_TEXT:0:50}..."
             return 0
             ;;
         not_found)
-            HELP_STATE_STATUS="not_found"
-            log_warning "Help text not found for token: $HELP_STATE_TOKEN"
+            ABADDON_HELP_STATUS="not_found"
+            log_warning "Help text not found for token: $ABADDON_HELP_TOKEN"
             return 1
             ;;
         *)
-            HELP_STATE_STATUS="error"
+            ABADDON_HELP_STATUS="error"
             log_error "Failed to retrieve help text: $KV_STATE_STATUS"
             return 1
             ;;
@@ -186,7 +188,7 @@ get_formatted_help() {
     if get_help_text "$feature_token" "$language"; then
         # Apply rich formatting using progress.sh
         local formatted_text
-        formatted_text=$(format_bold "$HELP_STATE_TEXT")
+        formatted_text=$(format_bold "$ABADDON_HELP_TEXT")
         echo "$formatted_text"
         return 0
     else
@@ -204,7 +206,7 @@ help_text_exists() {
     local language="${2:-$HELP_DEFAULT_LANGUAGE}"
     
     get_help_text "$feature_token" "$language" >/dev/null 2>&1
-    [[ "$HELP_STATE_STATUS" == "success" ]]
+    [[ "$ABADDON_HELP_STATUS" == "success" ]]
 }
 
 # Get help for command with full formatting
@@ -220,14 +222,14 @@ show_command_help() {
     # Display command name
     if get_help_text "command.${command}.name" "$language"; then
         local name_header
-        name_header=$(format_bold "$HELP_STATE_TEXT")
+        name_header=$(format_bold "$ABADDON_HELP_TEXT")
         echo "$name_header"
         echo
     fi
     
     # Display description
     if get_help_text "command.${command}.description" "$language"; then
-        echo "$HELP_STATE_TEXT"
+        echo "$ABADDON_HELP_TEXT"
         echo
     fi
     
@@ -235,10 +237,10 @@ show_command_help() {
     if get_help_text "command.${command}.usage" "$language"; then
         local usage_label
         if get_help_text "ui.usage" "$language"; then
-            usage_label=$(format_underline "$HELP_STATE_TEXT")
+            usage_label=$(format_underline "$ABADDON_HELP_TEXT")
             echo "$usage_label"
         fi
-        echo "  $HELP_STATE_TEXT"
+        echo "  $ABADDON_HELP_TEXT"
         echo
     fi
     
@@ -246,10 +248,10 @@ show_command_help() {
     if get_help_text "command.${command}.examples" "$language"; then
         local examples_label
         if get_help_text "ui.examples" "$language"; then
-            examples_label=$(format_underline "$HELP_STATE_TEXT")
+            examples_label=$(format_underline "$ABADDON_HELP_TEXT")
             echo "$examples_label"
         fi
-        echo "  $HELP_STATE_TEXT"
+        echo "  $ABADDON_HELP_TEXT"
         echo
     fi
 }
@@ -261,7 +263,7 @@ show_available_commands() {
     # Header
     if get_help_text "ui.available_commands" "$language"; then
         local header
-        header=$(format_bold "$HELP_STATE_TEXT")
+        header=$(format_bold "$ABADDON_HELP_TEXT")
         echo "$header"
         echo
     fi
@@ -277,11 +279,11 @@ show_available_commands() {
         local cmd_desc=""
         
         if get_help_text "command.${cmd}.name" "$language"; then
-            cmd_name="$HELP_STATE_TEXT"
+            cmd_name="$ABADDON_HELP_TEXT"
         fi
         
         if get_help_text "command.${cmd}.description" "$language"; then
-            cmd_desc="$HELP_STATE_TEXT"
+            cmd_desc="$ABADDON_HELP_TEXT"
         fi
         
         if [[ -n "$cmd_name" && -n "$cmd_desc" ]]; then
@@ -301,7 +303,7 @@ show_help_error() {
         local error_icon
         error_icon=$(status_icon "error" false)
         
-        local error_text="$HELP_STATE_TEXT"
+        local error_text="$ABADDON_HELP_TEXT"
         if [[ -n "$context" ]]; then
             error_text="${error_text}: $context"
         fi
@@ -313,6 +315,37 @@ show_help_error() {
         error_icon=$(status_icon "error" false)
         echo "$error_icon Error: $error_token" >&2
     fi
+}
+
+# ============================================================================
+# State Management
+# ============================================================================
+
+# Reset help state
+reset_help_state() {
+    ABADDON_HELP_TEXT=""
+    ABADDON_HELP_STATUS=""
+    ABADDON_HELP_LANGUAGE=""
+    ABADDON_HELP_TOKEN=""
+    log_debug "Help state reset"
+}
+
+# Set help error state
+set_help_error() {
+    local error_message="$1"
+    ABADDON_HELP_STATUS="error"
+    ABADDON_HELP_TEXT="$error_message"
+    log_error "Help Error: $error_message"
+}
+
+# Set help success state
+set_help_success() {
+    local value="${1:-}"
+    ABADDON_HELP_STATUS="success"
+    if [[ -n "$value" ]]; then
+        ABADDON_HELP_TEXT="$value"
+    fi
+    log_debug "Help Success: operation completed"
 }
 
 # ============================================================================
@@ -328,7 +361,7 @@ list_available_languages() {
 
 # Get current language setting
 get_current_language() {
-    echo "${HELP_STATE_LANGUAGE:-$HELP_DEFAULT_LANGUAGE}"
+    echo "${ABADDON_HELP_LANGUAGE:-$HELP_DEFAULT_LANGUAGE}"
 }
 
 # Validate help system functionality
@@ -344,7 +377,7 @@ help_validate() {
     done
     
     # Check state variables exist
-    for var in HELP_STATE_TEXT HELP_STATE_STATUS HELP_STATE_LANGUAGE; do
+    for var in ABADDON_HELP_TEXT ABADDON_HELP_STATUS ABADDON_HELP_LANGUAGE; do
         if ! declare -p "$var" >/dev/null 2>&1; then
             log_error "Missing state variable: $var"
             ((errors++))
@@ -365,7 +398,7 @@ help_info() {
     echo "abaddon-help.sh - Language-Agnostic Help System"
     echo "Version: 1.0.0"
     echo "Functions: get_help_text, show_command_help, show_available_commands"
-    echo "State: HELP_STATE_TEXT, HELP_STATE_STATUS, HELP_STATE_LANGUAGE"
+    echo "State: ABADDON_HELP_TEXT, ABADDON_HELP_STATUS, ABADDON_HELP_LANGUAGE"
     echo "Translations: $HELP_TRANSLATIONS_DIR"
 }
 

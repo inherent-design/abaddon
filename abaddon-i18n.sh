@@ -26,7 +26,7 @@ readonly ABADDON_I18N_LOADED=1
 
 # Configuration - environment configurable
 declare -g ABADDON_I18N_DEFAULT_LOCALE="${ABADDON_I18N_DEFAULT_LOCALE:-en}"
-declare -g ABADDON_I18N_FRAMEWORK_TRANSLATIONS_DIR="${ABADDON_I18N_FRAMEWORK_TRANSLATIONS_DIR:-${ABADDON_LIB_DIR:-$HOME/.local/lib/abaddon}/translations}"
+declare -g ABADDON_I18N_FRAMEWORK_TRANSLATIONS_DIR="${ABADDON_I18N_FRAMEWORK_TRANSLATIONS_DIR:-${ABADDON_LIB_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}/translations}"
 declare -g ABADDON_I18N_APP_TRANSLATIONS_DIR="${ABADDON_I18N_APP_TRANSLATIONS_DIR:-}"
 declare -g ABADDON_I18N_APP_DOMAIN="${ABADDON_I18N_APP_DOMAIN:-}"
 
@@ -82,7 +82,7 @@ i18n_init() {
     log_debug "App domain: ${app_domain:-none}"
     log_debug "App translations: ${app_translations_dir:-none}"
     
-    # Initialize core abladdon domain
+    # Initialize core abaddon domain
     ABADDON_I18N_DOMAIN_PATHS["abaddon"]="$ABADDON_I18N_FRAMEWORK_TRANSLATIONS_DIR"
     
     # Register primary application domain if provided
