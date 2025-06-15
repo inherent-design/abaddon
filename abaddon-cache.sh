@@ -32,12 +32,135 @@ declare -g ABADDON_CACHE_OPERATIONS=0
 declare -g ABADDON_CACHE_PERF_LOG_ENABLED="${ABADDON_CACHE_PERF_LOG_ENABLED:-false}"
 declare -g ABADDON_CACHE_PERF_LOG_FILE="${ABADDON_CACHE_DIR}/performance.log"
 
+# Cache module state variables (following framework pattern)
+declare -g ABADDON_CACHE_STATUS=""
+declare -g ABADDON_CACHE_ERROR_MESSAGE=""
+
+# Cache module constants
+readonly ABADDON_CACHE_SUCCESS="success"
+readonly ABADDON_CACHE_ERROR="error"
+
+# ============================================================================
+# MODULE CONTRACT INTERFACE (MANDATORY for all Abaddon modules)
+# ============================================================================
+
+# Clear all cache module state variables
+clear_cache_state() {
+    ABADDON_CACHE_STATUS=""
+    ABADDON_CACHE_ERROR_MESSAGE=""
+    ABADDON_CACHE_HIT_COUNT=0
+    ABADDON_CACHE_MISS_COUNT=0
+    ABADDON_CACHE_OPERATIONS=0
+    
+    # Clear memory store
+    ABADDON_CACHE_MEMORY_STORE=()
+    ABADDON_CACHE_TIMESTAMPS=()
+    
+    log_debug "Cache module state cleared"
+}
+
+# Return module status: "ready|error|incomplete|unknown"
+get_cache_status() {
+    if [[ "$ABADDON_CACHE_STATUS" == "$ABADDON_CACHE_SUCCESS" ]]; then
+        echo "ready"
+    elif [[ "$ABADDON_CACHE_STATUS" == "$ABADDON_CACHE_ERROR" ]]; then
+        echo "error"
+    elif [[ "$ABADDON_CACHE_ENABLED" == "true" && -d "$ABADDON_CACHE_DIR" ]]; then
+        echo "ready"
+    elif [[ "$ABADDON_CACHE_ENABLED" == "false" ]]; then
+        echo "ready"  # Disabled cache is still ready (just no-op)
+    else
+        echo "incomplete"
+    fi
+}
+
+# Export cache state for cross-module access
+export_cache_state() {
+    echo "ABADDON_CACHE_STATUS='$ABADDON_CACHE_STATUS'"
+    echo "ABADDON_CACHE_ERROR_MESSAGE='$ABADDON_CACHE_ERROR_MESSAGE'"
+    echo "ABADDON_CACHE_ENABLED='$ABADDON_CACHE_ENABLED'"
+    echo "ABADDON_CACHE_HIT_COUNT='$ABADDON_CACHE_HIT_COUNT'"
+    echo "ABADDON_CACHE_MISS_COUNT='$ABADDON_CACHE_MISS_COUNT'"
+    echo "ABADDON_CACHE_OPERATIONS='$ABADDON_CACHE_OPERATIONS'"
+}
+
+# Validate cache module state consistency
+validate_cache_state() {
+    local errors=0
+    local validation_messages=()
+    
+    # Check required functions exist
+    local required_functions=(
+        "init_cache" "cache_key" "is_cache_valid" "cache_store" "cache_get"
+        "clear_cache_state" "get_cache_status" "export_cache_state"
+    )
+    
+    for func in "${required_functions[@]}"; do
+        if ! declare -F "$func" >/dev/null 2>&1; then
+            validation_messages+=("Missing function: $func")
+            ((errors++))
+        fi
+    done
+    
+    # Check state variables exist
+    local required_vars=(
+        "ABADDON_CACHE_STATUS" "ABADDON_CACHE_ERROR_MESSAGE" "ABADDON_CACHE_ENABLED"
+        "ABADDON_CACHE_HIT_COUNT" "ABADDON_CACHE_MISS_COUNT" "ABADDON_CACHE_OPERATIONS"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            validation_messages+=("Missing state variable: $var")
+            ((errors++))
+        fi
+    done
+    
+    # Check core dependency is loaded
+    if [[ -z "${ABADDON_CORE_LOADED:-}" ]]; then
+        validation_messages+=("Required dependency not loaded: abaddon-core.sh")
+        ((errors++))
+    fi
+    
+    # Check cache directory if enabled
+    if [[ "$ABADDON_CACHE_ENABLED" == "true" && ! -d "$ABADDON_CACHE_DIR" ]]; then
+        validation_messages+=("Cache enabled but directory missing: $ABADDON_CACHE_DIR")
+        ((errors++))
+    fi
+    
+    # Output validation results
+    if [[ $errors -eq 0 ]]; then
+        log_debug "Cache module validation: PASSED"
+        return 0
+    else
+        log_error "Cache module validation: FAILED ($errors errors)"
+        for msg in "${validation_messages[@]}"; do
+            log_error "  - $msg"
+        done
+        return 1
+    fi
+}
+
+# Set cache error state
+set_cache_error() {
+    local error_message="$1"
+    ABADDON_CACHE_STATUS="$ABADDON_CACHE_ERROR"
+    ABADDON_CACHE_ERROR_MESSAGE="$error_message"
+    log_error "Cache error: $error_message"
+}
+
+# Set cache success state
+set_cache_success() {
+    ABADDON_CACHE_STATUS="$ABADDON_CACHE_SUCCESS"
+    ABADDON_CACHE_ERROR_MESSAGE=""
+}
+
 # ============================================================================
 # Cache Initialization
 # ============================================================================
 
 # Initialize cache system
 init_cache() {
+    clear_cache_state
     log_debug "Initializing cache system"
 
     # Create cache directory if it doesn't exist
@@ -45,6 +168,7 @@ init_cache() {
         if ! mkdir -p "$ABADDON_CACHE_DIR" 2>/dev/null; then
             log_warn "Cannot create cache directory: $ABADDON_CACHE_DIR"
             ABADDON_CACHE_ENABLED="false"
+            set_cache_error "Cannot create cache directory: $ABADDON_CACHE_DIR"
             return 1
         fi
         log_debug "Created cache directory: $ABADDON_CACHE_DIR"
@@ -52,9 +176,10 @@ init_cache() {
 
     # Initialize performance logging
     if [[ "$ABADDON_CACHE_PERF_LOG_ENABLED" == "true" ]]; then
-        echo "# Abaddon Performance Log - $(date)" >>"$ABADDON_CACHE_PERF_LOG_FILE"
+        echo "# Abaddon Cache Performance Log - $(date)" >>"$ABADDON_CACHE_PERF_LOG_FILE"
     fi
 
+    set_cache_success
     log_debug "Cache system initialized (enabled: $ABADDON_CACHE_ENABLED)"
     return 0
 }

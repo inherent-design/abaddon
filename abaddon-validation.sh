@@ -31,14 +31,90 @@ readonly ABADDON_VALIDATION_ERROR="error"
 readonly ABADDON_VALIDATION_WARNING="warning"
 
 # ============================================================================
-# Core Validation Functions
+# MODULE CONTRACT INTERFACE (MANDATORY for all Abaddon modules)
 # ============================================================================
 
-# Reset validation state
-reset_validation_state() {
+# Clear all validation module state variables
+clear_validation_state() {
     ABADDON_VALIDATION_STATUS=""
     ABADDON_VALIDATION_ERROR_MESSAGE=""
     ABADDON_VALIDATION_DETAILS=""
+    log_debug "Validation module state cleared"
+}
+
+# Return module status: "ready|error|incomplete|unknown"
+get_validation_status() {
+    if [[ "$ABADDON_VALIDATION_STATUS" == "$ABADDON_VALIDATION_SUCCESS" ]]; then
+        echo "ready"
+    elif [[ "$ABADDON_VALIDATION_STATUS" == "$ABADDON_VALIDATION_ERROR" ]]; then
+        echo "error"
+    elif [[ -n "${ABADDON_CORE_LOADED:-}" && -n "${ABADDON_PLATFORM_LOADED:-}" ]]; then
+        echo "ready"
+    else
+        echo "incomplete"
+    fi
+}
+
+# Export validation state for cross-module access
+export_validation_state() {
+    echo "ABADDON_VALIDATION_STATUS='$ABADDON_VALIDATION_STATUS'"
+    echo "ABADDON_VALIDATION_ERROR_MESSAGE='$ABADDON_VALIDATION_ERROR_MESSAGE'"
+    echo "ABADDON_VALIDATION_DETAILS='$ABADDON_VALIDATION_DETAILS'"
+}
+
+# Validate validation module state consistency
+validate_validation_state() {
+    local errors=0
+    local validation_messages=()
+    
+    # Check required functions exist
+    local required_functions=(
+        "validate_file_path" "validate_file_exists" "validate_directory_path"
+        "validate_json_content" "validate_yaml_content" "validate_field_required"
+        "clear_validation_state" "get_validation_status" "export_validation_state"
+    )
+    
+    for func in "${required_functions[@]}"; do
+        if ! declare -F "$func" >/dev/null 2>&1; then
+            validation_messages+=("Missing function: $func")
+            ((errors++))
+        fi
+    done
+    
+    # Check state variables exist
+    local required_vars=(
+        "ABADDON_VALIDATION_STATUS" "ABADDON_VALIDATION_ERROR_MESSAGE" "ABADDON_VALIDATION_DETAILS"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            validation_messages+=("Missing state variable: $var")
+            ((errors++))
+        fi
+    done
+    
+    # Check dependencies are loaded
+    if [[ -z "${ABADDON_CORE_LOADED:-}" ]]; then
+        validation_messages+=("Required dependency not loaded: abaddon-core.sh")
+        ((errors++))
+    fi
+    
+    if [[ -z "${ABADDON_PLATFORM_LOADED:-}" ]]; then
+        validation_messages+=("Required dependency not loaded: abaddon-platform.sh")
+        ((errors++))
+    fi
+    
+    # Output validation results
+    if [[ $errors -eq 0 ]]; then
+        log_debug "Validation module validation: PASSED"
+        return 0
+    else
+        log_error "Validation module validation: FAILED ($errors errors)"
+        for msg in "${validation_messages[@]}"; do
+            log_error "  - $msg"
+        done
+        return 1
+    fi
 }
 
 # Set validation error state
@@ -67,7 +143,7 @@ set_validation_success() {
 }
 
 # ============================================================================
-# Path and File Validation
+# Core Validation Functions
 # ============================================================================
 
 # Validate file path for security (prevent path traversal)
@@ -75,7 +151,7 @@ validate_file_path() {
     local file_path="$1"
     local allow_absolute="${2:-false}"
     
-    reset_validation_state
+    clear_validation_state
     
     # Basic existence check
     if [[ -z "$file_path" ]]; then
@@ -115,7 +191,7 @@ validate_file_path() {
 validate_file_exists() {
     local file_path="$1"
     
-    reset_validation_state
+    clear_validation_state
     
     # First validate the path itself
     if ! validate_file_path "$file_path" true; then
@@ -143,7 +219,7 @@ validate_directory_path() {
     local dir_path="$1"
     local create_if_missing="${2:-false}"
     
-    reset_validation_state
+    clear_validation_state
     
     # First validate the path itself
     if ! validate_file_path "$dir_path" true; then
@@ -187,7 +263,7 @@ normalize_query_path() {
     local tool="$1"
     local abaddon_path="$2"
     
-    reset_validation_state
+    clear_validation_state
     
     if [[ -z "$tool" ]] || [[ -z "$abaddon_path" ]]; then
         set_validation_error "Tool and path are required for normalization"
@@ -243,7 +319,7 @@ validate_and_extract() {
     local abaddon_path="$3"
     local default_value="${4:-}"
     
-    reset_validation_state
+    clear_validation_state
     
     if [[ -z "$format" ]] || [[ -z "$content" ]]; then
         set_validation_error "Format and content are required"
@@ -411,7 +487,7 @@ validate_field_required() {
     local data_content="$2"
     local format="${3:-json}"
     
-    reset_validation_state
+    clear_validation_state
     
     if [[ -z "$field_path" ]]; then
         set_validation_error "Field path cannot be empty"
@@ -454,7 +530,7 @@ validate_value_in_list() {
     local value="$1"
     local allowed_list="$2"  # Comma-separated values
     
-    reset_validation_state
+    clear_validation_state
     
     if [[ -z "$value" ]]; then
         set_validation_error "Value cannot be empty"
@@ -481,7 +557,7 @@ validate_numeric_range() {
     local min_value="$2"
     local max_value="$3"
     
-    reset_validation_state
+    clear_validation_state
     
     # Check if value is numeric
     if ! [[ "$value" =~ ^[0-9]+$ ]]; then
@@ -514,7 +590,7 @@ validate_json_schema() {
     local json_content="$1"
     local schema_file="$2"
     
-    reset_validation_state
+    clear_validation_state
     
     # First validate inputs
     if ! validate_json_content "$json_content"; then
@@ -556,7 +632,7 @@ validate_json_schema() {
 validate_command_name() {
     local command_name="$1"
     
-    reset_validation_state
+    clear_validation_state
     
     if [[ -z "$command_name" ]]; then
         set_validation_error "Command name cannot be empty"
@@ -577,7 +653,7 @@ validate_command_name() {
 validate_project_name() {
     local project_name="$1"
     
-    reset_validation_state
+    clear_validation_state
     
     if [[ -z "$project_name" ]]; then
         set_validation_error "Project name cannot be empty"
@@ -640,7 +716,7 @@ validation_validate() {
     # Check required functions exist
     local required_functions=(
         "validate_file_path" "validate_file_exists" "validate_json_content"
-        "reset_validation_state" "set_validation_error" "set_validation_success"
+        "clear_validation_state" "set_validation_error" "set_validation_success"
     )
     
     for func in "${required_functions[@]}"; do
