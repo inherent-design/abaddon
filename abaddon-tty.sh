@@ -50,8 +50,12 @@ _clear_tty_colors() {
     ABADDON_TTY_NC=""
 }
 
-# Reset TTY module state
-reset_tty_state() {
+# ============================================================================
+# MODULE CONTRACT INTERFACE (MANDATORY for all Abaddon modules)
+# ============================================================================
+
+# Clear all TTY module state variables
+clear_tty_state() {
     ABADDON_TTY_STATUS=""
     ABADDON_TTY_ERROR_MESSAGE=""
     ABADDON_TTY_COLORS=0
@@ -63,7 +67,99 @@ reset_tty_state() {
     ABADDON_TTY_TPUT_AVAILABLE=""
     
     _clear_tty_colors
+    log_debug "TTY module state cleared"
 }
+
+# Return module status: "ready|error|incomplete|unknown"
+get_tty_status() {
+    if [[ "$ABADDON_TTY_STATUS" == "$ABADDON_TTY_SUCCESS" ]]; then
+        echo "ready"
+    elif [[ "$ABADDON_TTY_STATUS" == "$ABADDON_TTY_ERROR" ]]; then
+        echo "error"
+    elif [[ "$ABADDON_TTY_COLORS" -gt 0 ]]; then
+        echo "ready"
+    else
+        echo "incomplete"
+    fi
+}
+
+# Export TTY state for cross-module access
+export_tty_state() {
+    echo "ABADDON_TTY_STATUS='$ABADDON_TTY_STATUS'"
+    echo "ABADDON_TTY_ERROR_MESSAGE='$ABADDON_TTY_ERROR_MESSAGE'"
+    echo "ABADDON_TTY_COLORS='$ABADDON_TTY_COLORS'"
+    echo "ABADDON_TTY_INTERACTIVE='$ABADDON_TTY_INTERACTIVE'"
+    echo "ABADDON_TTY_WIDTH='$ABADDON_TTY_WIDTH'"
+    echo "ABADDON_TTY_HEIGHT='$ABADDON_TTY_HEIGHT'"
+    echo "ABADDON_TTY_SUPPORTS_UNICODE='$ABADDON_TTY_SUPPORTS_UNICODE'"
+    echo "ABADDON_TTY_LAST_OPERATION='$ABADDON_TTY_LAST_OPERATION'"
+    echo "ABADDON_TTY_TPUT_AVAILABLE='$ABADDON_TTY_TPUT_AVAILABLE'"
+}
+
+# Validate TTY module state consistency
+validate_tty_state() {
+    local errors=0
+    local validation_messages=()
+    
+    # Check required functions exist
+    local required_functions=(
+        "detect_tty_capabilities" "configure_tty_colors" "tty_render_message"
+        "clear_tty_state" "get_tty_status" "export_tty_state"
+    )
+    
+    for func in "${required_functions[@]}"; do
+        if ! declare -F "$func" >/dev/null 2>&1; then
+            validation_messages+=("Missing function: $func")
+            ((errors++))
+        fi
+    done
+    
+    # Check state variables exist
+    local required_vars=(
+        "ABADDON_TTY_STATUS" "ABADDON_TTY_ERROR_MESSAGE" "ABADDON_TTY_COLORS"
+        "ABADDON_TTY_INTERACTIVE" "ABADDON_TTY_WIDTH" "ABADDON_TTY_HEIGHT"
+        "ABADDON_TTY_SUPPORTS_UNICODE" "ABADDON_TTY_LAST_OPERATION"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            validation_messages+=("Missing state variable: $var")
+            ((errors++))
+        fi
+    done
+    
+    # Check color variables exist (may be empty if no color support)
+    local color_vars=(
+        "ABADDON_TTY_RED" "ABADDON_TTY_GREEN" "ABADDON_TTY_YELLOW"
+        "ABADDON_TTY_BLUE" "ABADDON_TTY_CYAN" "ABADDON_TTY_BOLD" "ABADDON_TTY_NC"
+    )
+    
+    for var in "${color_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            validation_messages+=("Missing color variable: $var")
+            ((errors++))
+        fi
+    done
+    
+    # Check core dependency is loaded
+    if [[ -z "${ABADDON_CORE_LOADED:-}" ]]; then
+        validation_messages+=("Required dependency not loaded: abaddon-core.sh")
+        ((errors++))
+    fi
+    
+    # Output validation results
+    if [[ $errors -eq 0 ]]; then
+        log_debug "TTY module validation: PASSED"
+        return 0
+    else
+        log_error "TTY module validation: FAILED ($errors errors)"
+        for msg in "${validation_messages[@]}"; do
+            log_error "  - $msg"
+        done
+        return 1
+    fi
+}
+
 
 # Set TTY error state
 set_tty_error() {
@@ -83,7 +179,7 @@ set_tty_success() {
 
 # Detect terminal capabilities and configure colors accordingly
 detect_tty_capabilities() {
-    reset_tty_state
+    clear_tty_state
     
     # Cache tput availability
     if command -v tput >/dev/null 2>&1; then
@@ -266,9 +362,6 @@ tty_status_icon() {
 }
 
 # TTY state accessors (following framework pattern)
-get_tty_status() {
-    echo "$ABADDON_TTY_STATUS"
-}
 
 get_tty_error_message() {
     echo "$ABADDON_TTY_ERROR_MESSAGE"
@@ -318,7 +411,7 @@ validate_tty_module() {
         "tty_info"
         "tty_succeeded"
         "tty_failed"
-        "reset_tty_state"
+        "clear_tty_state"
         "set_tty_error"
         "set_tty_success"
     )

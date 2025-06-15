@@ -141,13 +141,100 @@ log_semantic() {
     echo -e "${color}$*${ABADDON_CORE_COLOR_NC}" >&2
 }
 
-# Reset core module state
-reset_core_state() {
+# ============================================================================
+# MODULE CONTRACT INTERFACE (MANDATORY for all Abaddon modules)
+# ============================================================================
+# Following empack's proven patterns: clear, get, export, validate functions
+
+# Clear all core module state variables
+clear_core_state() {
     ABADDON_CORE_PLATFORM=""
     ABADDON_CORE_CAPABILITIES=""
     ABADDON_CORE_STATUS=""
     ABADDON_CORE_ERROR_MESSAGE=""
+    log_debug "Core module state cleared"
 }
+
+# Return module status: "ready|error|incomplete|unknown"
+get_core_status() {
+    if [[ "$ABADDON_CORE_STATUS" == "$ABADDON_CORE_SUCCESS" ]]; then
+        echo "ready"
+    elif [[ "$ABADDON_CORE_STATUS" == "$ABADDON_CORE_ERROR" ]]; then
+        echo "error"
+    elif [[ -n "$ABADDON_CORE_PLATFORM" && -n "$ABADDON_CORE_CAPABILITIES" ]]; then
+        echo "ready"
+    else
+        echo "incomplete"
+    fi
+}
+
+# Export core state for cross-module access
+export_core_state() {
+    echo "ABADDON_CORE_PLATFORM='$ABADDON_CORE_PLATFORM'"
+    echo "ABADDON_CORE_CAPABILITIES='$ABADDON_CORE_CAPABILITIES'"
+    echo "ABADDON_CORE_STATUS='$ABADDON_CORE_STATUS'"
+    echo "ABADDON_CORE_ERROR_MESSAGE='$ABADDON_CORE_ERROR_MESSAGE'"
+    echo "ABADDON_CORE_LOG_LEVEL='$ABADDON_CORE_LOG_LEVEL'"
+}
+
+# Validate core module state consistency
+validate_core_state() {
+    local errors=0
+    local validation_messages=()
+    
+    # Check required functions exist
+    local required_functions=(
+        "detect_platform" "get_platform_capabilities" "log_info" "log_error"
+        "clear_core_state" "get_core_status" "export_core_state"
+    )
+    
+    for func in "${required_functions[@]}"; do
+        if ! declare -F "$func" >/dev/null 2>&1; then
+            validation_messages+=("Missing function: $func")
+            ((errors++))
+        fi
+    done
+    
+    # Check state variables exist and are properly typed
+    local required_vars=(
+        "ABADDON_CORE_STATUS" "ABADDON_CORE_PLATFORM"
+        "ABADDON_CORE_CAPABILITIES" "ABADDON_CORE_ERROR_MESSAGE"
+        "ABADDON_CORE_LOG_LEVEL"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            validation_messages+=("Missing state variable: $var")
+            ((errors++))
+        fi
+    done
+    
+    # Check semantic color constants exist
+    local semantic_constants=(
+        "ABADDON_CORE_SEMANTIC_ERROR" "ABADDON_CORE_SEMANTIC_SUCCESS"
+        "ABADDON_CORE_SEMANTIC_WARNING" "ABADDON_CORE_SEMANTIC_INFO"
+    )
+    
+    for const in "${semantic_constants[@]}"; do
+        if ! declare -p "$const" >/dev/null 2>&1; then
+            validation_messages+=("Missing semantic constant: $const")
+            ((errors++))
+        fi
+    done
+    
+    # Output validation results
+    if [[ $errors -eq 0 ]]; then
+        log_debug "Core module validation: PASSED"
+        return 0
+    else
+        log_error "Core module validation: FAILED ($errors errors)"
+        for msg in "${validation_messages[@]}"; do
+            log_error "  - $msg"
+        done
+        return 1
+    fi
+}
+
 
 # Set core error state
 set_core_error() {
@@ -165,7 +252,7 @@ set_core_success() {
 
 # Enhanced platform detection with capabilities
 detect_platform() {
-    reset_core_state
+    clear_core_state
 
     local platform
     case "$(uname -s)" in
@@ -464,37 +551,5 @@ get_core_error_message() { echo "$ABADDON_CORE_ERROR_MESSAGE"; }
 core_succeeded() { [[ "$ABADDON_CORE_STATUS" == "$ABADDON_CORE_SUCCESS" ]]; }
 core_failed() { [[ "$ABADDON_CORE_STATUS" == "$ABADDON_CORE_ERROR" ]]; }
 
-# Module validation function (required by framework)
-core_validate() {
-    local errors=0
-
-    # Check required functions exist
-    local required_functions=(
-        "detect_platform" "get_platform_capabilities" "log_info" "log_error"
-        "set_core_error" "set_core_success" "reset_core_state"
-    )
-
-    for func in "${required_functions[@]}"; do
-        if ! declare -F "$func" >/dev/null; then
-            log_error "Missing function: $func"
-            ((errors++))
-        fi
-    done
-
-    # Check state variables exist
-    local required_vars=(
-        "ABADDON_CORE_STATUS" "ABADDON_CORE_PLATFORM"
-        "ABADDON_CORE_CAPABILITIES" "ABADDON_CORE_ERROR_MESSAGE"
-    )
-
-    for var in "${required_vars[@]}"; do
-        if ! declare -p "$var" >/dev/null 2>&1; then
-            log_error "Missing state variable: $var"
-            ((errors++))
-        fi
-    done
-
-    return $errors
-}
 
 log_debug "Abaddon Core module loaded successfully with standardized state management"

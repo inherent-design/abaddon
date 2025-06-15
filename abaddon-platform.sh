@@ -59,14 +59,105 @@ declare -A ABADDON_PLATFORM_TOOL_CAPABILITIES=(
     ["yq"]="yaml_parsing,json_conversion,filtering,transformation"
 )
 
-# Reset platform module state
-reset_platform_state() {
+# ============================================================================
+# MODULE CONTRACT INTERFACE (MANDATORY for all Abaddon modules)
+# ============================================================================
+
+# Clear all platform module state variables
+clear_platform_state() {
     ABADDON_PLATFORM_STATUS=""
     ABADDON_PLATFORM_ERROR_MESSAGE=""
     ABADDON_PLATFORM_TOOL_COUNTS=""
     ABADDON_PLATFORM_AVAILABLE_TOOLS=""
     ABADDON_PLATFORM_MISSING_TOOLS=""
+    log_debug "Platform module state cleared"
 }
+
+# Return module status: "ready|error|incomplete|unknown"
+get_platform_status() {
+    if [[ "$ABADDON_PLATFORM_STATUS" == "$ABADDON_PLATFORM_SUCCESS" ]]; then
+        echo "ready"
+    elif [[ "$ABADDON_PLATFORM_STATUS" == "$ABADDON_PLATFORM_ERROR" ]]; then
+        echo "error"
+    elif [[ -n "$ABADDON_PLATFORM_AVAILABLE_TOOLS" ]]; then
+        echo "ready"
+    else
+        echo "incomplete"
+    fi
+}
+
+# Export platform state for cross-module access
+export_platform_state() {
+    echo "ABADDON_PLATFORM_STATUS='$ABADDON_PLATFORM_STATUS'"
+    echo "ABADDON_PLATFORM_ERROR_MESSAGE='$ABADDON_PLATFORM_ERROR_MESSAGE'"
+    echo "ABADDON_PLATFORM_TOOL_COUNTS='$ABADDON_PLATFORM_TOOL_COUNTS'"
+    echo "ABADDON_PLATFORM_AVAILABLE_TOOLS='$ABADDON_PLATFORM_AVAILABLE_TOOLS'"
+    echo "ABADDON_PLATFORM_MISSING_TOOLS='$ABADDON_PLATFORM_MISSING_TOOLS'"
+}
+
+# Validate platform module state consistency
+validate_platform_state() {
+    local errors=0
+    local validation_messages=()
+    
+    # Check required functions exist
+    local required_functions=(
+        "check_tool" "get_tool_version" "get_best_tool" "has_capability"
+        "clear_platform_state" "get_platform_status" "export_platform_state"
+    )
+    
+    for func in "${required_functions[@]}"; do
+        if ! declare -F "$func" >/dev/null 2>&1; then
+            validation_messages+=("Missing function: $func")
+            ((errors++))
+        fi
+    done
+    
+    # Check state variables exist
+    local required_vars=(
+        "ABADDON_PLATFORM_STATUS" "ABADDON_PLATFORM_ERROR_MESSAGE"
+        "ABADDON_PLATFORM_TOOL_COUNTS" "ABADDON_PLATFORM_AVAILABLE_TOOLS"
+        "ABADDON_PLATFORM_MISSING_TOOLS"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            validation_messages+=("Missing state variable: $var")
+            ((errors++))
+        fi
+    done
+    
+    # Check tool registries exist
+    local required_arrays=(
+        "ABADDON_PLATFORM_MODERN_TOOLS" "ABADDON_PLATFORM_TOOLS"
+    )
+    
+    for array in "${required_arrays[@]}"; do
+        if ! declare -p "$array" >/dev/null 2>&1; then
+            validation_messages+=("Missing tool registry: $array")
+            ((errors++))
+        fi
+    done
+    
+    # Check core dependency is loaded
+    if [[ -z "${ABADDON_CORE_LOADED:-}" ]]; then
+        validation_messages+=("Required dependency not loaded: abaddon-core.sh")
+        ((errors++))
+    fi
+    
+    # Output validation results
+    if [[ $errors -eq 0 ]]; then
+        log_debug "Platform module validation: PASSED"
+        return 0
+    else
+        log_error "Platform module validation: FAILED ($errors errors)"
+        for msg in "${validation_messages[@]}"; do
+            log_error "  - $msg"
+        done
+        return 1
+    fi
+}
+
 
 # Set platform error state
 set_platform_error() {
@@ -170,7 +261,7 @@ check_tool_availability() {
     local working_tools=()
     local suggest_only="${ABADDON_SUGGEST_ONLY:-false}"
     
-    reset_platform_state
+    clear_platform_state
     log_info "Checking modern tool availability..."
     
     for tool in "${required_tools[@]}"; do
@@ -511,7 +602,6 @@ show_tool_status() {
 }
 
 # State access functions (following framework pattern)
-get_platform_status() { echo "$ABADDON_PLATFORM_STATUS"; }
 get_platform_error_message() { echo "$ABADDON_PLATFORM_ERROR_MESSAGE"; }
 get_platform_tool_counts() { echo "$ABADDON_PLATFORM_TOOL_COUNTS"; }
 get_platform_available_tools() { echo "$ABADDON_PLATFORM_AVAILABLE_TOOLS"; }
@@ -528,7 +618,7 @@ platform_validate() {
     # Check required functions exist
     local required_functions=(
         "check_tool" "get_tool_info" "check_tool_availability"
-        "set_platform_error" "set_platform_success" "reset_platform_state"
+        "set_platform_error" "set_platform_success" "clear_platform_state"
     )
     
     for func in "${required_functions[@]}"; do
