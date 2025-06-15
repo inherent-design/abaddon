@@ -456,113 +456,199 @@ get_module_path() {
     echo "${ABADDON_TESTS_RUNNER_DIR}/abaddon-${module}.sh"
 }
 
-# Enhanced test discovery with P2/P3 support
-discover_and_run_tests() {
-    local test_spec="${1:-all}"
-    local tests_dir="$ABADDON_TESTS_DIR"
+# ============================================================================
+# Enhanced Multi-Argument Test Selection System
+# ============================================================================
 
+# Canonical test execution order (also serves as valid module list)
+# P1 Foundation → P2 Performance & Security → P3 Data & Communication → P4 Application
+declare -a ABADDON_TEST_ORDER=(
+    "core" "tty" "platform" "p1-integration"           # P1 Foundation
+    "cache" "validation" "kv" "p2-integration"         # P2 Performance & Security  
+    "i18n" "http" "p3-integration"                     # P3 Data & Communication
+    "commands"                                         # P4 Application Primitives
+)
+
+# Test suite definitions (composable groups)
+declare -A ABADDON_TEST_SUITES
+ABADDON_TEST_SUITES[p1]="core tty platform p1-integration"
+ABADDON_TEST_SUITES[p2]="cache validation kv p2-integration" 
+ABADDON_TEST_SUITES[p3]="i18n http p3-integration"
+ABADDON_TEST_SUITES[p4]="commands"
+ABADDON_TEST_SUITES[all]="core tty platform p1-integration cache validation kv p2-integration i18n http p3-integration commands"
+ABADDON_TEST_SUITES[integration]="p1-integration p2-integration p3-integration"
+
+# Validate if a test module is recognized
+is_valid_module() {
+    local test_name="$1"
+    local module
+    for module in "${ABADDON_TEST_ORDER[@]}"; do
+        if [[ "$module" == "$test_name" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Add tests to selection set (with suite expansion)
+add_to_set() {
+    local -n set_ref=$1
+    local test_spec="$2"
+    
+    if [[ -n "${ABADDON_TEST_SUITES[$test_spec]:-}" ]]; then
+        # Expand suite to individual tests
+        local test
+        for test in ${ABADDON_TEST_SUITES[$test_spec]}; do
+            set_ref[$test]=1
+        done
+    elif is_valid_module "$test_spec"; then
+        # Add individual module
+        set_ref[$test_spec]=1
+    else
+        echo "ERROR: Unknown test suite or module: $test_spec" >&2
+        echo "Available suites: ${!ABADDON_TEST_SUITES[*]}" >&2  
+        echo "Available modules: ${ABADDON_TEST_ORDER[*]}" >&2
+        return 1
+    fi
+}
+
+# Remove tests from selection set (with suite expansion)
+remove_from_set() {
+    local -n set_ref=$1
+    local test_spec="$2"
+    
+    if [[ -n "${ABADDON_TEST_SUITES[$test_spec]:-}" ]]; then
+        # Remove suite tests
+        local test
+        for test in ${ABADDON_TEST_SUITES[$test_spec]}; do
+            unset set_ref[$test] 2>/dev/null || true
+        done
+    elif is_valid_module "$test_spec"; then
+        # Remove individual module
+        unset set_ref[$test_spec] 2>/dev/null || true
+    else
+        echo "ERROR: Unknown test suite or module: $test_spec" >&2
+        echo "Available suites: ${!ABADDON_TEST_SUITES[*]}" >&2
+        echo "Available modules: ${ABADDON_TEST_ORDER[*]}" >&2
+        return 1
+    fi
+}
+
+# Convert selection set to ordered array using canonical order
+convert_set_to_ordered_array() {
+    local result_array_name="$1"
+    local set_array_name="$2"
+    
+    # Clear the result array
+    eval "${result_array_name}=()"
+    local test
+    
+    # Iterate through canonical order, include if selected
+    for test in "${ABADDON_TEST_ORDER[@]}"; do
+        # Check if test is in the set
+        if eval "[[ -n \"\${${set_array_name}[$test]:-}\" ]]"; then
+            eval "${result_array_name}+=('$test')"
+        fi
+    done
+}
+
+# Parse CLI arguments with additive/subtractive support
+parse_test_arguments() {
+    local result_array_name="$1"
+    shift
+    
+    local -A selected_set
+    local current_arg
+    local has_args=false
+    
+    # Process arguments with shift pattern
+    while [[ $# -gt 0 ]]; do
+        current_arg="$1"
+        
+        case "$current_arg" in
+        --no-color)
+            # Skip color flag, don't mark as having test args
+            ;;
+        -*)
+            # Removal operation: -core, -p1-integration
+            local test_name="${current_arg#-}"
+            if ! remove_from_set selected_set "$test_name"; then
+                return 1
+            fi
+            has_args=true
+            ;;
+        *)
+            # Addition operation: p2, core, p3
+            if ! add_to_set selected_set "$current_arg"; then
+                return 1
+            fi
+            has_args=true
+            ;;
+        esac
+        shift
+    done
+    
+    # Default to 'all' if no test arguments provided
+    if [[ "$has_args" == "false" ]]; then
+        add_to_set selected_set "all"
+    fi
+    
+    # Convert set to ordered array
+    convert_set_to_ordered_array "$result_array_name" "selected_set"
+}
+
+# Convert test names to file paths
+convert_tests_to_files() {
+    local -n files_ref=$1
+    local tests_array_name="$2"
+    local tests_dir="$ABADDON_TESTS_DIR"
+    
+    files_ref=()
+    local test
+    
+    # Use eval to access the array by name
+    eval "local tests_array=(\"\${${tests_array_name}[@]}\")"
+    
+    for test in "${tests_array[@]}"; do
+        local test_file="$tests_dir/${test}.sh"
+        if [[ -f "$test_file" ]]; then
+            files_ref+=("$test_file")
+        else
+            echo "# Warning: Test file not found: $test_file" >&2
+        fi
+    done
+}
+
+# Enhanced test discovery with multi-argument support and stable ordering
+discover_and_run_tests() {
+    local tests_dir="$ABADDON_TESTS_DIR"
+    
     # Initialize test framework (pass all args for --no-color detection)
     setup_test_framework "$@"
-
+    
+    # Parse CLI arguments for test selection
+    local selected_tests=()
+    if ! parse_test_arguments "selected_tests" "$@"; then
+        return 1
+    fi
+    
     # Print TAP header with enhanced information
     echo "$ABADDON_TESTS_TAP_VERSION"
     echo "# Abaddon Test Runner v${ABADDON_TESTS_VERSION}"
     echo "# Test isolation: $ABADDON_TESTS_ISOLATION_MODE"
     echo "# Color support: $ABADDON_TESTS_COLOR_DETECTION"
+    echo "# Selected tests: ${selected_tests[*]}"
     echo
 
-    # Determine test files to run (enhanced suite support)
+    # Convert selected tests to file paths
     local test_files=()
-    case "$test_spec" in
-    all)
-        # Complete test suite (all layers)
-        test_files=(
-            "$tests_dir/core.sh"
-            "$tests_dir/tty.sh" 
-            "$tests_dir/platform.sh"
-            "$tests_dir/p1-integration.sh"
-            "$tests_dir/cache.sh"
-            "$tests_dir/validation.sh"
-            "$tests_dir/kv.sh"
-            "$tests_dir/i18n.sh"
-            "$tests_dir/commands.sh"
-            "$tests_dir/help.sh"
-        )
-        ;;
-    p1)
-        # P1 Foundation layer (core + tty + platform + integration)
-        test_files=(
-            "$tests_dir/core.sh"
-            "$tests_dir/tty.sh"
-            "$tests_dir/platform.sh"
-            "$tests_dir/p1-integration.sh"
-        )
-        ;;
-    p2)
-        # P2 Performance & Security Layer (cache + validation + integration)
-        test_files=(
-            "$tests_dir/cache.sh"
-            "$tests_dir/validation.sh"
-            "$tests_dir/p2-integration.sh"
-        )
-        ;;
-    p3)
-        # P3 Data & Communication Services (kv + i18n + integration)
-        test_files=(
-            "$tests_dir/kv.sh"
-            "$tests_dir/i18n.sh"
-            "$tests_dir/p3-integration.sh"
-        )
-        ;;
-    p4)
-        # P4 Application Primitives (commands + help + new primitives)
-        test_files=(
-            "$tests_dir/commands.sh"
-            "$tests_dir/help.sh"
-        )
-        ;;
-    foundation)
-        # P1+P2+P3 foundation (without P4 application primitives)
-        test_files=(
-            "$tests_dir/core.sh"
-            "$tests_dir/tty.sh"
-            "$tests_dir/platform.sh"
-            "$tests_dir/p1-integration.sh"
-            "$tests_dir/cache.sh"
-            "$tests_dir/validation.sh"
-            "$tests_dir/kv.sh"
-            "$tests_dir/i18n.sh"
-        )
-        ;;
-    integration)
-        # All integration tests (P1, P2, P3)
-        test_files=(
-            "$tests_dir/p1-integration.sh"
-            "$tests_dir/p2-integration.sh"
-            "$tests_dir/p3-integration.sh"
-        )
-        ;;
-    # Individual module tests
-    core|tty|platform|cache|validation|kv|i18n|commands|help)
-        test_files=("$tests_dir/${test_spec}.sh")
-        ;;
-    # Specific integration tests
-    p1-integration|p2-integration|p3-integration)
-        test_files=("$tests_dir/${test_spec}.sh")
-        ;;
-    *)
-        # Pattern matching fallback
-        while IFS= read -r -d '' file; do
-            test_files+=("$file")
-        done < <(find "$tests_dir" -name "${test_spec}*.sh" -type f -print0 2>/dev/null)
-        ;;
-    esac
+    convert_tests_to_files test_files "selected_tests"
 
     # Validate test files exist
     if [[ ${#test_files[@]} -eq 0 ]]; then
-        echo "# No test files found for: $test_spec"
-        echo "# Available: core, tty, platform, cache, validation, kv, i18n, commands, help"
-        echo "# Suites: p1, p2, p3, p4, foundation, integration, all"
+        echo "# No test files found"
+        echo "# Available suites: ${!ABADDON_TEST_SUITES[*]}"
+        echo "# Available modules: ${ABADDON_TEST_ORDER[*]}"
         echo "1..0"
         return 0
     fi
@@ -588,23 +674,27 @@ discover_and_run_tests() {
 # ============================================================================
 
 main() {
-    local test_suite="${1:-all}"
-
-    case "$test_suite" in
+    # Check for help request first
+    case "${1:-}" in
     help|--help|-h)
         cat <<'EOF'
-Abaddon Test Runner v2.0.0 - 2-Tier Testing Architecture
+Abaddon Test Runner v2.0.0 - Enhanced Multi-Argument Test Selection
 
 Usage:
-  ./abaddon-tests.sh [test_suite] [--no-color]
+  ./abaddon-tests.sh [test_specs...] [--no-color]
+
+Multi-Argument Support:
+  - Each argument adds that suite/module to the run (deduplication)
+  - Stable ordering based on architectural layers (P1→P2→P3→P4)
+  - Use minus prefix (-) to remove previously added tests
+  - Unknown test names cause immediate error
 
 Test Suites:
   all          - Run complete test suite (P1+P2+P3+P4)
-  foundation   - Run foundation tests (P1+P2+P3)
   p1           - Run P1 Foundation (core, tty, platform, p1-integration)
-  p2           - Run P2 Performance & Security (cache, validation)
-  p3           - Run P3 Data & Communication (kv, i18n)
-  p4           - Run P4 Application Primitives (commands, help)
+  p2           - Run P2 Performance & Security (cache, validation, kv, integration)
+  p3           - Run P3 Data & Communication (i18n, http, integration)
+  p4           - Run P4 Application Primitives (commands)
   integration  - Run all integration tests
 
 Individual Modules:
@@ -613,25 +703,21 @@ Individual Modules:
   platform     - Platform module tests (tool detection, capabilities)
   cache        - Cache module tests (P2 performance optimization)
   validation   - Validation module tests (P2 security, input validation)
-  kv           - Key-value module tests (P3 data access layer)
+  kv           - Key-value module tests (P2 data access layer)
   i18n         - Internationalization module tests (P3 communication)
+  http         - HTTP module tests (P3 communication layer)
   commands     - Commands module tests (P4 command registry)
-  help         - Help module tests (P4 documentation system)
-
-Integration Tests:
   p1-integration - P1 Foundation integration workflows
   p2-integration - P2 Performance & Security coordination workflows
   p3-integration - P3 Data & Communication integration workflows
 
 Features:
   - TAP version 13 compatible output
-  - 2-tier testing architecture (ABADDON_TESTS_* + ABADDON_TESTS_MODULE_*)
-  - Lifecycle hook discovery (module_test_setup/teardown/isolate/validate)
-  - Enhanced test isolation with timeout protection
-  - Module-specific state cleanup
-  - Integration test state tracking
-  - Color detection following TTY architecture patterns
-  - Production-grade error handling and reporting
+  - Multi-argument additive/subtractive test selection
+  - Stable architectural ordering (P1→P2→P3→P4)
+  - Automatic deduplication using set semantics
+  - 2-tier testing architecture with lifecycle hooks
+  - Enhanced test isolation and error reporting
 
 Options:
   --no-color                       - Disable color output (for TAP parsers)
@@ -641,15 +727,13 @@ Environment Variables:
   NO_COLOR=1                       - Disable color output (standard)
   
 Examples:
-  ./abaddon-tests.sh               # Run all tests
-  ./abaddon-tests.sh p1            # Run P1 foundation tests  
-  ./abaddon-tests.sh p2            # Run P2 performance & security
-  ./abaddon-tests.sh p3            # Run P3 data & communication
-  ./abaddon-tests.sh foundation    # Run P1+P2+P3 foundation
-  ./abaddon-tests.sh integration   # Run integration tests
-  ./abaddon-tests.sh core          # Run core module only
-  ./abaddon-tests.sh p1 --no-color # Run P1 tests without colors
-  NO_COLOR=1 ./abaddon-tests.sh all # Run all tests without colors
+  ./abaddon-tests.sh               # Run all tests (default)
+  ./abaddon-tests.sh p2 i18n       # Run P2 suite + i18n module
+  ./abaddon-tests.sh p2 core p3    # Ordered: core, P2 suite, P3 suite
+  ./abaddon-tests.sh p1 -core      # P1 suite minus core module
+  ./abaddon-tests.sh all -p4       # All tests except P4 suite
+  ./abaddon-tests.sh tty platform  # Just tty and platform modules
+  ./abaddon-tests.sh badname       # ERROR: Unknown test name
 EOF
         ;;
     *)
