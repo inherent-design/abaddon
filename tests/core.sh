@@ -159,13 +159,13 @@ test_core_ensure_directory_existing() {
 }
 
 # Test module validation
-test_core_validate_module_success() {
+test_validate_core_state_module_success() {
     source "$(get_module_path core)"
     # Test with actual functions that exist
     validate_module "core" "log_info" "detect_platform"
 }
 
-test_core_validate_module_missing_function() {
+test_validate_core_state_module_missing_function() {
     source "$(get_module_path core)"
     validate_module "core" "nonexistent_function"
 }
@@ -188,7 +188,7 @@ test_core_state_reset() {
     ABADDON_CORE_PLATFORM="test"
     ABADDON_CORE_STATUS="error"
     # Reset and check
-    reset_core_state
+    clear_core_state
     [[ -z "${ABADDON_CORE_PLATFORM}" ]] && [[ -z "${ABADDON_CORE_STATUS}" ]]
 }
 
@@ -218,7 +218,7 @@ test_core_success_failure_helpers() {
 
 test_core_module_validation() {
     source "$(get_module_path core)"
-    core_validate
+    validate_core_state
 }
 
 # ============================================================================
@@ -269,8 +269,8 @@ register_core_tests() {
     run_test "Ensure directory handles existing directory" test_core_ensure_directory_existing
 
     # Module validation tests
-    run_test "Validate module with existing functions" test_core_validate_module_success
-    run_test "Validate module fails with missing function" test_core_validate_module_missing_function false
+    run_test "Validate module with existing functions" test_validate_core_state_module_success
+    run_test "Validate module fails with missing function" test_validate_core_state_module_missing_function false
 
     # Performance measurement tests
     run_test "Measure execution tracks successful commands" test_core_measure_execution_success

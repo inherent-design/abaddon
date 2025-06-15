@@ -266,7 +266,7 @@ test_platform_state_reset() {
     ABADDON_PLATFORM_STATUS="error"
     ABADDON_PLATFORM_ERROR_MESSAGE="test error"
     # Reset and check
-    reset_platform_state
+    clear_platform_state
     [[ -z "${ABADDON_PLATFORM_STATUS}" ]] && [[ -z "${ABADDON_PLATFORM_ERROR_MESSAGE}" ]]
 }
 
@@ -281,7 +281,7 @@ test_platform_set_success_state() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     set_platform_success
-    [[ "${ABADDON_PLATFORM_STATUS}" == "success" ]] && [[ -z "${ABADDON_PLATFORM_ERROR_MESSAGE}" ]]
+    [[ "${ABADDON_PLATFORM_STATUS}" == "$ABADDON_PLATFORM_SUCCESS" ]] && [[ -z "${ABADDON_PLATFORM_ERROR_MESSAGE}" ]]
 }
 
 test_platform_state_accessors() {
@@ -289,7 +289,7 @@ test_platform_state_accessors() {
     source "$(get_module_path platform)"
     # Test tool availability to set state
     check_tool_availability bash >/dev/null 2>&1
-    [[ -n "$(get_platform_tool_counts)" ]] && [[ "$(get_platform_status)" == "success" ]]
+    [[ -n "$(get_platform_tool_counts)" ]] && [[ "$(get_platform_status)" == "ready" ]]
 }
 
 test_platform_success_failure_helpers() {

@@ -86,7 +86,7 @@ test_tty_state_reset() {
     ABADDON_TTY_STATUS="error"
     ABADDON_TTY_COLORS=256
     # Reset and check
-    reset_tty_state
+    clear_tty_state
     [[ -z "$ABADDON_TTY_STATUS" ]] && [[ "$ABADDON_TTY_COLORS" -eq 0 ]]
 }
 
@@ -112,7 +112,7 @@ test_tty_state_accessors() {
     source "$(get_module_path core)"
     source "$(get_module_path tty)"
     set_tty_success "accessor_test"
-    [[ "$(get_tty_status)" == "$ABADDON_TTY_SUCCESS" ]] && \
+    [[ "$(get_tty_status)" == "ready" ]] && \
     [[ "$(get_tty_last_operation)" == "accessor_test" ]]
 }
 
