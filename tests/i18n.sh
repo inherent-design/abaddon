@@ -26,7 +26,7 @@ test_i18n_state_reset() {
     source "$(get_module_path kv)"
     source "$(get_module_path i18n)"
     
-    reset_i18n_state
+    clear_i18n_state
     [[ "${ABADDON_I18N_INITIALIZED:-}" == "false" ]]
 }
 
@@ -95,7 +95,7 @@ test_i18n_basic_translation() {
     
     t 'test.welcome' >/dev/null 2>&1
     local result=$(get_i18n_value)
-    local status=$(get_i18n_status)
+    local status=$(get_i18n_lookup_status)
     
     rm -rf "$test_dir"
     
@@ -120,7 +120,7 @@ test_i18n_variable_substitution() {
     
     t 'test.greeting' 'Atlas' >/dev/null 2>&1
     local result=$(get_i18n_value)
-    local status=$(get_i18n_status)
+    local status=$(get_i18n_lookup_status)
     
     rm -rf "$test_dir"
     
@@ -144,7 +144,7 @@ test_i18n_missing_key() {
     i18n_init --app-domain="test" --app-translations="$test_dir/translations" >/dev/null 2>&1
     
     t 'test.nonexistent' >/dev/null 2>&1
-    local status=$(get_i18n_status)
+    local status=$(get_i18n_lookup_status)
     local result=$(get_i18n_value)
     
     rm -rf "$test_dir"
@@ -161,10 +161,10 @@ test_i18n_uninitialized() {
     source "$(get_module_path kv)"
     source "$(get_module_path i18n)"
     
-    reset_i18n_state
+    clear_i18n_state
     
     t 'test.message' >/dev/null 2>&1
-    local status=$(get_i18n_status)
+    local status=$(get_i18n_lookup_status)
     local result=$(get_i18n_value)
     
     [[ "$status" == "error" && "$result" == "[i18n_not_initialized:test.message]" ]]

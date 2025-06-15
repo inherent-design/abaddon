@@ -37,6 +37,7 @@ declare -g ABADDON_I18N_LOOKUP_STATUS=""
 declare -g ABADDON_I18N_LAST_KEY=""
 declare -g ABADDON_I18N_SUBSTITUTION_COUNT=0
 declare -g ABADDON_I18N_ERROR_MESSAGE=""
+declare -g ABADDON_I18N_STATUS=""
 
 # I18n result constants
 readonly ABADDON_I18N_SUCCESS="success"
@@ -47,6 +48,110 @@ readonly ABADDON_I18N_DOMAIN_ERROR="domain_error"
 # Domain registry for extensible translation contexts
 declare -A ABADDON_I18N_DOMAIN_PATHS
 declare -g ABADDON_I18N_INITIALIZED="${ABADDON_I18N_INITIALIZED:-false}"
+
+# ============================================================================
+# MODULE CONTRACT INTERFACE (MANDATORY for all Abaddon modules)
+# ============================================================================
+
+# Clear all i18n module state variables
+clear_i18n_state() {
+    ABADDON_I18N_CURRENT_LOCALE=""
+    ABADDON_I18N_TRANSLATED_TEXT=""
+    ABADDON_I18N_LOOKUP_STATUS=""
+    ABADDON_I18N_LAST_KEY=""
+    ABADDON_I18N_SUBSTITUTION_COUNT=0
+    ABADDON_I18N_ERROR_MESSAGE=""
+    ABADDON_I18N_STATUS=""
+    ABADDON_I18N_INITIALIZED="false"
+    ABADDON_I18N_APP_DOMAIN=""
+    ABADDON_I18N_APP_TRANSLATIONS_DIR=""
+    unset ABADDON_I18N_DOMAIN_PATHS 2>/dev/null || true
+    declare -A ABADDON_I18N_DOMAIN_PATHS
+    log_debug "i18n module state cleared"
+}
+
+# Return module status: "ready|error|incomplete|unknown"
+get_i18n_status() {
+    if [[ "$ABADDON_I18N_STATUS" == "ready" ]]; then
+        echo "ready"
+    elif [[ "$ABADDON_I18N_STATUS" == "error" ]]; then
+        echo "error"
+    elif [[ "$ABADDON_I18N_INITIALIZED" == "true" ]]; then
+        echo "ready"
+    elif [[ -n "${ABADDON_CORE_LOADED:-}" && -n "${ABADDON_KV_LOADED:-}" ]]; then
+        echo "incomplete"
+    else
+        echo "unknown"
+    fi
+}
+
+# Export i18n state for cross-module access
+export_i18n_state() {
+    echo "ABADDON_I18N_STATUS='$ABADDON_I18N_STATUS'"
+    echo "ABADDON_I18N_ERROR_MESSAGE='$ABADDON_I18N_ERROR_MESSAGE'"
+    echo "ABADDON_I18N_CURRENT_LOCALE='$ABADDON_I18N_CURRENT_LOCALE'"
+    echo "ABADDON_I18N_TRANSLATED_TEXT='$ABADDON_I18N_TRANSLATED_TEXT'"
+    echo "ABADDON_I18N_LOOKUP_STATUS='$ABADDON_I18N_LOOKUP_STATUS'"
+    echo "ABADDON_I18N_LAST_KEY='$ABADDON_I18N_LAST_KEY'"
+    echo "ABADDON_I18N_SUBSTITUTION_COUNT='$ABADDON_I18N_SUBSTITUTION_COUNT'"
+    echo "ABADDON_I18N_INITIALIZED='$ABADDON_I18N_INITIALIZED'"
+}
+
+# Validate i18n module state consistency
+validate_i18n_state() {
+    local errors=0
+    local validation_messages=()
+    
+    # Check required functions exist
+    local required_functions=(
+        "i18n_init" "t" "add_i18n_domain" "detect_locale"
+        "clear_i18n_state" "get_i18n_status" "export_i18n_state"
+    )
+    
+    for func in "${required_functions[@]}"; do
+        if ! declare -F "$func" >/dev/null 2>&1; then
+            validation_messages+=("Missing function: $func")
+            ((errors++))
+        fi
+    done
+    
+    # Check state variables exist
+    local required_vars=(
+        "ABADDON_I18N_STATUS" "ABADDON_I18N_ERROR_MESSAGE" "ABADDON_I18N_CURRENT_LOCALE"
+        "ABADDON_I18N_TRANSLATED_TEXT" "ABADDON_I18N_LOOKUP_STATUS" "ABADDON_I18N_INITIALIZED"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            validation_messages+=("Missing state variable: $var")
+            ((errors++))
+        fi
+    done
+    
+    # Check dependencies are loaded
+    local required_deps=(
+        "ABADDON_CORE_LOADED" "ABADDON_KV_LOADED"
+    )
+    
+    for dep in "${required_deps[@]}"; do
+        if [[ -z "${!dep:-}" ]]; then
+            validation_messages+=("Required dependency not loaded: ${dep/_LOADED/}")
+            ((errors++))
+        fi
+    done
+    
+    # Output validation results
+    if [[ $errors -eq 0 ]]; then
+        log_debug "i18n module validation: PASSED"
+        return 0
+    else
+        log_error "i18n module validation: FAILED ($errors errors)"
+        for msg in "${validation_messages[@]}"; do
+            log_error "  - $msg"
+        done
+        return 1
+    fi
+}
 
 # ============================================================================
 # Core Initialization
@@ -265,8 +370,8 @@ get_translated_text() {
     echo "$ABADDON_I18N_TRANSLATED_TEXT"
 }
 
-# Get translation lookup status
-get_i18n_status() {
+# Get translation lookup status  
+get_i18n_lookup_status() {
     echo "$ABADDON_I18N_LOOKUP_STATUS"
 }
 
@@ -365,27 +470,6 @@ validate_i18n() {
 # i18n State Management
 # ============================================================================
 
-# Reset i18n state (P3 standardized)
-reset_i18n_state() {
-    ABADDON_I18N_CURRENT_LOCALE=""
-    ABADDON_I18N_TRANSLATED_TEXT=""
-    ABADDON_I18N_LOOKUP_STATUS=""
-    ABADDON_I18N_LAST_KEY=""
-    ABADDON_I18N_SUBSTITUTION_COUNT=0
-    ABADDON_I18N_ERROR_MESSAGE=""
-    ABADDON_I18N_INITIALIZED="false"
-    ABADDON_I18N_APP_DOMAIN=""
-    ABADDON_I18N_APP_TRANSLATIONS_DIR=""
-    unset ABADDON_I18N_DOMAIN_PATHS 2>/dev/null || true
-    declare -A ABADDON_I18N_DOMAIN_PATHS
-    log_debug "i18n state reset"
-}
-
-# Legacy alias for backward compatibility
-clear_i18n_state() {
-    reset_i18n_state
-}
-
 # Set i18n error state
 set_i18n_error() {
     local error_message="$1"
@@ -415,8 +499,8 @@ i18n_validate() {
     # Check required functions exist
     local required_functions=(
         "i18n_init" "t" "add_i18n_domain"
-        "reset_i18n_state" "set_i18n_error" "set_i18n_success"
-        "get_i18n_value" "get_i18n_status" "list_i18n_domains"
+        "clear_i18n_state" "set_i18n_error" "set_i18n_success"
+        "get_i18n_value" "get_i18n_lookup_status" "list_i18n_domains"
     )
     
     for func in "${required_functions[@]}"; do

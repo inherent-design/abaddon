@@ -32,7 +32,7 @@ test_http_state_reset() {
     ABADDON_HTTP_STATUS_CODE="200"
     ABADDON_HTTP_LAST_URL="https://example.com"
     
-    reset_http_state
+    clear_http_state
     
     [[ -z "${ABADDON_HTTP_RESPONSE_BODY:-}" ]] && \
     [[ -z "${ABADDON_HTTP_STATUS:-}" ]] && \
@@ -48,7 +48,7 @@ test_http_set_error_state() {
     source "$(get_module_path kv)"
     source "$(get_module_path http)"
     
-    reset_http_state
+    clear_http_state
     set_http_error "test error message"
     
     [[ "${ABADDON_HTTP_STATUS:-}" == "error" ]] && \
@@ -63,7 +63,7 @@ test_http_set_success_state() {
     source "$(get_module_path kv)"
     source "$(get_module_path http)"
     
-    reset_http_state
+    clear_http_state
     set_http_success
     
     [[ "${ABADDON_HTTP_STATUS:-}" == "success" ]] && \
@@ -378,7 +378,7 @@ test_http_parse_response_no_body() {
     source "$(get_module_path kv)"
     source "$(get_module_path http)"
     
-    reset_http_state
+    clear_http_state
     
     http_parse_response "json" "key"
 }
@@ -391,7 +391,7 @@ test_http_parse_response_failed_request() {
     source "$(get_module_path kv)"
     source "$(get_module_path http)"
     
-    reset_http_state
+    clear_http_state
     ABADDON_HTTP_RESPONSE_BODY="test response"
     ABADDON_HTTP_STATUS="error"
     
@@ -422,7 +422,7 @@ test_http_get_status_accessor() {
     
     ABADDON_HTTP_STATUS="success"
     
-    [[ "$(get_http_status)" == "success" ]]
+    [[ "$(get_http_request_status)" == "success" ]]
 }
 
 test_http_get_status_code_accessor() {

@@ -74,6 +74,119 @@ declare -g ABADDON_HTTP_REQUESTS=0
 declare -g ABADDON_HTTP_CACHE_HITS=0
 declare -g ABADDON_HTTP_NETWORK_ERRORS=0
 
+# HTTP module state variables
+declare -g ABADDON_HTTP_MODULE_STATUS=""
+
+# ============================================================================
+# MODULE CONTRACT INTERFACE (MANDATORY for all Abaddon modules)
+# ============================================================================
+
+# Clear all HTTP module state variables
+clear_http_state() {
+    ABADDON_HTTP_RESPONSE_BODY=""
+    ABADDON_HTTP_RESPONSE_HEADERS=""
+    ABADDON_HTTP_STATUS_CODE=""
+    ABADDON_HTTP_STATUS=""
+    ABADDON_HTTP_ERROR_MESSAGE=""
+    ABADDON_HTTP_LAST_URL=""
+    ABADDON_HTTP_LAST_METHOD=""
+    ABADDON_HTTP_EXECUTION_TIME=""
+    ABADDON_HTTP_MODULE_STATUS=""
+    ABADDON_HTTP_REQUESTS=0
+    ABADDON_HTTP_CACHE_HITS=0
+    ABADDON_HTTP_NETWORK_ERRORS=0
+    log_debug "HTTP module state cleared"
+}
+
+# Return module status: "ready|error|incomplete|unknown"
+get_http_status() {
+    if [[ "$ABADDON_HTTP_MODULE_STATUS" == "ready" ]]; then
+        echo "ready"
+    elif [[ "$ABADDON_HTTP_MODULE_STATUS" == "error" ]]; then
+        echo "error"
+    elif [[ -n "$ABADDON_HTTP_CLIENT" ]]; then
+        echo "ready"
+    elif [[ -n "${ABADDON_CORE_LOADED:-}" && -n "${ABADDON_PLATFORM_LOADED:-}" && -n "${ABADDON_CACHE_LOADED:-}" && -n "${ABADDON_VALIDATION_LOADED:-}" && -n "${ABADDON_KV_LOADED:-}" ]]; then
+        echo "incomplete"
+    else
+        echo "unknown"
+    fi
+}
+
+# Export HTTP state for cross-module access
+export_http_state() {
+    echo "ABADDON_HTTP_MODULE_STATUS='$ABADDON_HTTP_MODULE_STATUS'"
+    echo "ABADDON_HTTP_STATUS='$ABADDON_HTTP_STATUS'"
+    echo "ABADDON_HTTP_ERROR_MESSAGE='$ABADDON_HTTP_ERROR_MESSAGE'"
+    echo "ABADDON_HTTP_RESPONSE_BODY='$ABADDON_HTTP_RESPONSE_BODY'"
+    echo "ABADDON_HTTP_STATUS_CODE='$ABADDON_HTTP_STATUS_CODE'"
+    echo "ABADDON_HTTP_LAST_URL='$ABADDON_HTTP_LAST_URL'"
+    echo "ABADDON_HTTP_LAST_METHOD='$ABADDON_HTTP_LAST_METHOD'"
+    echo "ABADDON_HTTP_EXECUTION_TIME='$ABADDON_HTTP_EXECUTION_TIME'"
+    echo "ABADDON_HTTP_CLIENT='$ABADDON_HTTP_CLIENT'"
+    echo "ABADDON_HTTP_REQUESTS='$ABADDON_HTTP_REQUESTS'"
+    echo "ABADDON_HTTP_CACHE_HITS='$ABADDON_HTTP_CACHE_HITS'"
+    echo "ABADDON_HTTP_NETWORK_ERRORS='$ABADDON_HTTP_NETWORK_ERRORS'"
+}
+
+# Validate HTTP module state consistency
+validate_http_state() {
+    local errors=0
+    local validation_messages=()
+    
+    # Check required functions exist
+    local required_functions=(
+        "http_request" "http_get" "http_post" "http_put" "http_delete"
+        "http_parse_response" "detect_http_client" "validate_url"
+        "clear_http_state" "get_http_status" "export_http_state"
+    )
+    
+    for func in "${required_functions[@]}"; do
+        if ! declare -F "$func" >/dev/null 2>&1; then
+            validation_messages+=("Missing function: $func")
+            ((errors++))
+        fi
+    done
+    
+    # Check state variables exist
+    local required_vars=(
+        "ABADDON_HTTP_MODULE_STATUS" "ABADDON_HTTP_STATUS" "ABADDON_HTTP_ERROR_MESSAGE"
+        "ABADDON_HTTP_RESPONSE_BODY" "ABADDON_HTTP_STATUS_CODE" "ABADDON_HTTP_CLIENT"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            validation_messages+=("Missing state variable: $var")
+            ((errors++))
+        fi
+    done
+    
+    # Check dependencies are loaded
+    local required_deps=(
+        "ABADDON_CORE_LOADED" "ABADDON_PLATFORM_LOADED" "ABADDON_CACHE_LOADED"
+        "ABADDON_VALIDATION_LOADED" "ABADDON_KV_LOADED"
+    )
+    
+    for dep in "${required_deps[@]}"; do
+        if [[ -z "${!dep:-}" ]]; then
+            validation_messages+=("Required dependency not loaded: ${dep/_LOADED/}")
+            ((errors++))
+        fi
+    done
+    
+    # Output validation results
+    if [[ $errors -eq 0 ]]; then
+        log_debug "HTTP module validation: PASSED"
+        return 0
+    else
+        log_error "HTTP module validation: FAILED ($errors errors)"
+        for msg in "${validation_messages[@]}"; do
+            log_error "  - $msg"
+        done
+        return 1
+    fi
+}
+
 # ============================================================================
 # HTTP Client Detection and Configuration
 # ============================================================================
@@ -133,7 +246,7 @@ http_request() {
     local headers=("$@")
     
     # Reset state
-    reset_http_state
+    clear_http_state
     
     # Input validation
     if [[ -z "$method" || -z "$url" ]]; then
@@ -569,18 +682,6 @@ validate_url() {
 # State Management Functions
 # ============================================================================
 
-# Reset HTTP state
-reset_http_state() {
-    ABADDON_HTTP_RESPONSE_BODY=""
-    ABADDON_HTTP_RESPONSE_HEADERS=""
-    ABADDON_HTTP_STATUS_CODE=""
-    ABADDON_HTTP_STATUS=""
-    ABADDON_HTTP_ERROR_MESSAGE=""
-    ABADDON_HTTP_LAST_URL=""
-    ABADDON_HTTP_LAST_METHOD=""
-    ABADDON_HTTP_EXECUTION_TIME=""
-}
-
 # Set HTTP error state
 set_http_error() {
     local error_message="$1"
@@ -601,7 +702,7 @@ set_http_success() {
 
 get_http_response() { echo "$ABADDON_HTTP_RESPONSE_BODY"; }
 get_http_headers() { echo "$ABADDON_HTTP_RESPONSE_HEADERS"; }
-get_http_status() { echo "$ABADDON_HTTP_STATUS"; }
+get_http_request_status() { echo "$ABADDON_HTTP_STATUS"; }
 get_http_status_code() { echo "$ABADDON_HTTP_STATUS_CODE"; }
 get_http_error() { echo "$ABADDON_HTTP_ERROR_MESSAGE"; }
 get_http_last_url() { echo "$ABADDON_HTTP_LAST_URL"; }

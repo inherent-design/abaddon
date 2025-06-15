@@ -141,7 +141,7 @@ test_p3_cross_layer_state() {
     # Verify state independence and i18n functionality
     local final_validation_status="$(get_validation_status)"
     local kv_status="$(get_kv_status)"  # KV will show success from i18n translation
-    local i18n_status="$(get_i18n_status)"
+    local i18n_status="$(get_i18n_lookup_status)"
     local i18n_value="$(get_i18n_value)"
     
     # Cleanup
@@ -245,7 +245,7 @@ test_p3_error_propagation() {
     
     # P3: Try to use i18n without initialization
     t "some.key"
-    local i18n_status="$(get_i18n_status)"
+    local i18n_status="$(get_i18n_lookup_status)"
     
     # Both should show error states
     [[ "$kv_status" == "error" ]] && [[ "$i18n_status" == "error" ]]
@@ -274,7 +274,7 @@ test_p3_http_kv_coordination() {
         local title="$(get_kv_value)"
         
         # Verify HTTP and KV coordination
-        [[ "$(get_http_status)" == "success" ]] && \
+        [[ "$(get_http_request_status)" == "success" ]] && \
         [[ "$(get_kv_status)" == "success" ]] && \
         [[ "$title" == "Sample Slide Show" ]]
     else
@@ -388,9 +388,9 @@ EOF
         rm -rf "$test_translations"
         
         # Verify complete P3 data flow
-        [[ "$(get_http_status)" == "success" ]] && \
+        [[ "$(get_http_request_status)" == "success" ]] && \
         [[ "$(get_kv_status)" == "success" ]] && \
-        [[ "$(get_i18n_status)" == "success" ]] && \
+        [[ "$(get_i18n_lookup_status)" == "success" ]] && \
         [[ "$user_agent" == "Abaddon-HTTP/1.0.0" ]] && \
         [[ "$localized_message" == "Client identified as: Abaddon-HTTP/1.0.0" ]]
     else
