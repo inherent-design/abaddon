@@ -25,7 +25,7 @@ test_validation_state_reset() {
     ABADDON_VALIDATION_ERROR_MESSAGE="test error"
     ABADDON_VALIDATION_DETAILS="test details"
     
-    reset_validation_state
+    clear_validation_state
     
     [[ -z "${ABADDON_VALIDATION_STATUS:-}" ]] && \
     [[ -z "${ABADDON_VALIDATION_ERROR_MESSAGE:-}" ]] && \
@@ -37,7 +37,7 @@ test_validation_set_error_state() {
     source "$(get_module_path platform)"
     source "$(get_module_path validation)"
     
-    reset_validation_state
+    clear_validation_state
     set_validation_error "test error message" "test details"
     
     [[ "${ABADDON_VALIDATION_STATUS:-}" == "error" ]] && \
@@ -50,7 +50,7 @@ test_validation_set_success_state() {
     source "$(get_module_path platform)"
     source "$(get_module_path validation)"
     
-    reset_validation_state
+    clear_validation_state
     set_validation_success "success details"
     
     [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
