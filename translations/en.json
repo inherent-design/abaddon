@@ -42,7 +42,7 @@
     "clean": {
       "name": "clean",
       "description": "Clean build artifacts and temporary files",
-      "usage": "abladdon clean [--all] [--cache]",
+      "usage": "abaddon clean [--all] [--cache]",
       "examples": "abaddon clean --all\nabaddon clean --cache"
     },
     "status": {

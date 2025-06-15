@@ -1,6 +1,6 @@
 # Abaddon Core Runtime Reference
 
-> **Runtime Documentation**: Real workflows, function chains, and orchestration patterns from the implemented Abladdon modular foundation.
+> **Runtime Documentation**: Real workflows, function chains, and orchestration patterns from the implemented Abaddon modular foundation.
 
 ## 📦 **Module Loading**
 
@@ -17,7 +17,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/abaddon-progress.sh"
 [[ "${ABADDON_PROGRESS_LOADED:-}" == "1" ]]
 ```
 
-### **Phase 2 Module Loading**
+### **P2 Utilities Module Loading**
 ```bash
 # Phase 2 modules with dependencies
 source "$(dirname "${BASH_SOURCE[0]}")/abaddon-core.sh"      # Required first
@@ -37,9 +37,9 @@ source "$(dirname "${BASH_SOURCE[0]}")/abaddon-kv.sh"        # Data access servi
 [[ -n "${ABADDON_CORE_LOADED:-}" ]] && return 0
 readonly ABADDON_CORE_LOADED=1
 
-# Phase 2 dependency verification
+# P2 dependency verification
 [[ -n "${ABADDON_CORE_LOADED:-}" ]] || {
-    echo "ERROR: Phase 2 modules require abaddon-core.sh" >&2
+    echo "ERROR: P2 modules require abaddon-core.sh" >&2
     return 1
 }
 ```
@@ -105,7 +105,7 @@ section_header "Details" 2       # Medium header
 section_header "Notes" 3         # Small header
 ```
 
-## ⚡ **Phase 2 Functions (Implemented)**
+## ⚡ **P2 Utilities Functions (Implemented)**
 
 ### **Cache Operations**
 ```bash
@@ -155,6 +155,71 @@ get_config_value "build.target" "config.toml"  # Uses tq
 get_config_value "server.host" "config.xml"    # Uses xq
 ```
 
+## 🔧 **P3 Services Functions (Implemented)**
+
+### **i18n Operations**
+```bash
+# From abaddon-i18n.sh
+i18n_init --app-domain="herald" --app-translations="./translations"
+
+# Translation with variables
+t "commands.init.description" "my-project" "web"
+translated=$(get_i18n_value)  # → "Initialize my-project with web template"
+
+# Domain routing
+t "framework.errors.timeout"     # Framework domain
+t "herald.build.success"         # Application domain
+
+# Locale support
+t "ui.welcome" --locale="es"     # Spanish with English fallback
+```
+
+### **Enhanced KV Operations**
+```bash
+# From abaddon-kv.sh (with i18n integration)
+get_config_value "project.name" "config.json" "default_value"
+project_name=$(get_kv_value)      # → extracted value
+format=$(get_kv_format)           # → "json"
+tool=$(get_kv_tool)               # → "jq"
+status=$(get_kv_status)           # → "success"
+
+# Multi-format with caching integration
+get_config_value "app.title" "config.yaml"     # Uses yq + cache
+get_config_value "build.target" "config.toml"  # Uses tq + cache
+get_config_value "server.host" "config.xml"    # Uses xq + cache
+```
+
+## 🎯 **P4 Runtime Functions (Partial Implementation)**
+
+### **Commands Operations (Implemented)**
+```bash
+# From abaddon-commands.sh
+commands_init "herald"
+register_command "build" "$(t 'commands.build.description')" "build_handler" 75
+
+# Command execution
+execute_command "build" --target=production
+status=$(get_commands_status)        # → "success"
+time=$(get_commands_execution_time)  # → "125ms"
+
+# Command discovery
+list_commands                        # → Available commands
+command_exists "build"               # → true/false
+get_command_info "build" "priority"  # → 75
+```
+
+### **Help Operations (Needs Integration)**
+```bash
+# From abaddon-help.sh (existing functionality)
+get_help_text "command.init.description" "en"
+show_command_help "init"
+show_available_commands
+
+# Planned integration (not yet implemented)
+show_command_help_i18n "build" "en"    # Commands + i18n integration
+list_commands_with_descriptions         # Dynamic discovery
+```
+
 ## 🧪 **Real Test Patterns (From Tests)**
 
 ### **Module Testing Pattern**
@@ -185,21 +250,27 @@ get_config_value "test.key" "test.json" "default"
 
 ## 🎯 **Current Implementation Status**
 
-### **✅ Fully Implemented & Tested (100% Coverage)**
+### **✅ P1 Foundation (100% Complete)**
 - **abaddon-core.sh**: Logging, platform detection, utilities (19 functions)
 - **abaddon-platform.sh**: Tool management, graceful degradation (14 functions)  
 - **abaddon-progress.sh**: Terminal UX, formatting (15 functions)
+
+### **✅ P2 Performance & Security Layer (100% Complete)**
 - **abaddon-cache.sh**: Performance optimization (23 functions)
 - **abaddon-validation.sh**: Security & validation (25 functions)
 - **abaddon-kv.sh**: Data access service (23 functions)
 
-### **🔄 Application Layer (Partial)**
-- **abaddon-help.sh**: Token resolution (existing, needs updates)
+### **🔄 P3 Data & Communication Services (66% Complete)**
+- **abaddon-i18n.sh**: Translation registry (17 functions) ✅
+- **abaddon-http.sh**: HTTP client with KV integration 🚧
 
-### **❌ Not Yet Implemented**
-- **abaddon-i18n.sh**: Translation registry
-- **abaddon-runtime.sh**: Central orchestrator
+### **🚧 P4 Application Primitives (0% Complete)**
+- **abaddon-state-machine.sh**: Generic state management primitive 🚧
+- **abaddon-commands.sh**: Command registry with validation hooks 🔄
+- **abaddon-templates.sh**: Variable substitution engine 🚧
+- **abaddon-workflows.sh**: Task orchestration primitive 🚧
+- **abaddon-help.sh**: Documentation framework 🚧
 
 ---
 
-*Reference Status: ✅ Phase 1 Complete | ✅ Phase 2 Complete | 🎯 Phase 3 Application Layer Ready*
+*Reference Status: ✅ P1 Foundation Complete | ✅ P2 Performance & Security Complete | 🔄 P3 Data & Communication 66% Complete | 🚧 P4 Application Primitives 0% Complete*

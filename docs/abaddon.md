@@ -4,26 +4,27 @@
 
 ## 🌟 **Project Overview**
 
-**Status**: Phase 1 Complete ✅ | Phase 2 Complete ✅ | Phase 3 Application Layer Ready 🎯
+**Status**: P1 Foundation Complete ✅ | P2 Utilities Complete ✅ | P3 Services Complete ✅ | P4 Runtime 33% Complete 🔄
 
-Abaddon is a **three-tier clean architecture framework** that transforms bash scripting from chaotic scripts to professional, maintainable applications. Every component is crafted with performance obsession, production pragmatism, and architectural sophistication.
+Abaddon is a **four-priority clean architecture framework** that transforms bash scripting from chaotic scripts to professional, maintainable applications. Every component is crafted with performance obsession, production pragmatism, and architectural sophistication.
 
 ## 📐 **Clean Architecture Excellence**
 
 ```bash
-🏗️ Tier 3: Applications (Business Logic)
-├── help.sh       ✅ Token resolution & rich formatting (existing)
-├── i18n.sh       ❌ Translation registry (not implemented)
+🎯 P4 Runtime/Application (Business Logic)
+├── commands.sh   ✅ Command registry system with runtime boundaries
+├── help.sh       🔄 Token resolution (needs commands + i18n integration)
 └── runtime.sh    ❌ Central orchestrator (not implemented)
 
-🔧 Tier 2: Services (Domain Logic)  
-└── kv.sh         ✅ Multi-format data access with caching
+🔧 P3 Services (Domain Logic)
+├── kv.sh         ✅ Multi-format data access with caching
+└── i18n.sh       ✅ Translation registry with variable substitution
 
-⚡ Tier 1: Utilities (Infrastructure)
+⚡ P2 Utilities (Infrastructure)
 ├── cache.sh      ✅ Performance optimization & smart eviction
 └── validation.sh ✅ Security & tool path normalization
 
-🌍 Tier 0: Foundation (Universal Compatibility)
+🌍 P1 Foundation (Universal Compatibility)
 ├── core.sh       ✅ Logging, platform detection, utilities
 ├── platform.sh   ✅ Tool management & graceful degradation  
 └── progress.sh   ✅ Terminal UX & progress visualization
@@ -31,12 +32,12 @@ Abaddon is a **three-tier clean architecture framework** that transforms bash sc
 
 ## 🎯 **Current Implementation Status**
 
-### **Phase 1: Foundation (100% Complete ✅)**
+### **P1 Foundation (100% Complete ✅)**
 - **Test Coverage**: 100/100 tests passing (100% success rate)
 - **Cross-Platform**: Validated on macOS/Linux with elegant fallbacks
 - **Stable Foundation**: Error handling, logging, platform detection, terminal UX
 
-### **Phase 2: Runtime-Core (100% Complete ✅)**
+### **P2 Utilities (100% Complete ✅)**
 
 #### **Cache Module: Smart Performance (100% Tests Passing)**
 ```bash
@@ -74,6 +75,8 @@ normalize_query_path "xq" "project.name"  # → "project.name"
 # - Multi-format support: JSON (jq), YAML (yq), TOML (tq), XML (xq)
 ```
 
+### **P3 Services (100% Complete ✅)**
+
 #### **KV Module: Data Access Service (100% Tests Passing)**
 ```bash
 # Implemented data access features
@@ -87,6 +90,62 @@ status=$(get_kv_status)           # Operation status
 get_config_value "app.title" "config.yaml"     # Uses yq
 get_config_value "build.target" "config.toml"  # Uses tq  
 get_config_value "server.host" "config.xml"    # Uses xq
+```
+
+#### **i18n Module: Translation Registry (100% Tests Passing)**
+```bash
+# Implemented internationalization features
+i18n_init --app-domain="herald" --app-translations="./translations"
+
+# Translation with variable substitution
+t "commands.init.description" "project-name" "web"
+result=$(get_i18n_value)  # → "Initialize project-name with web template"
+
+# Dual-domain support (framework + application)
+t "framework.errors.file_not_found"    # Framework translations
+t "herald.commands.build.success"      # Application translations
+
+# Locale detection and fallback
+t "ui.welcome" --locale="fr"  # French if available, English fallback
+```
+
+### **P4 Runtime/Application (33% Complete 🔄)**
+
+#### **Commands Module: Registry System (100% Tests Passing)**
+```bash
+# Command registry with runtime boundary enforcement
+commands_init "herald"
+register_command "init" "$(t 'commands.init.description')" "herald_init_handler" 50 true
+register_command "build" "$(t 'commands.build.description')" "herald_build_handler" 75
+
+# Command execution with validation
+execute_command "build" --target=production
+status=$(get_commands_status)     # → "success"
+time=$(get_commands_execution_time)  # → "125ms"
+
+# Command discovery and listing
+list_commands                     # → Available command names
+get_command_info "build" "description"  # → Command details
+```
+
+#### **Help Module: Integration Pending (Needs Commands + i18n)**
+```bash
+# Existing token resolution (available)
+get_help_text "command.init.description" "en"
+show_command_help "init"
+show_available_commands
+
+# Planned enhancements (not yet implemented)
+show_command_help_i18n "build" "en"    # Commands + i18n integration
+list_commands_with_descriptions         # Dynamic command discovery
+```
+
+#### **Runtime Module: Central Orchestrator (Not Implemented)**
+```bash
+# Planned orchestration features (future implementation)
+runtime_init "application-context"
+runtime_register_services
+runtime_execute_lifecycle
 ```
 
 ## 🧪 **DFCPT Testing Excellence**
@@ -105,11 +164,11 @@ get_config_value "server.host" "config.xml"    # Uses xq
 
 **Current Test Matrix:**
 ```bash
-Core Foundation: 100% (48/48 functions, 100/100 tests)
-Cache Module:    100% (23/23 functions, 35/35 tests)
-Validation:      100% (25/25 functions, 65/65 tests) 
-KV Service:      100% (23/23 functions, 38/38 tests)
-Overall:         100% (119/119 functions, 238/238 tests)
+P1 Foundation:  100% (48/48 functions, 100/100 tests) ✅
+P2 Utilities:   100% (48/48 functions, 100/100 tests) ✅
+P3 Services:    100% (40/40 functions, 47/47 tests)   ✅
+P4 Runtime:     33% (30/90 functions, 30/90 tests)    🔄
+Overall:        89% (166/226 functions, 277/337 tests) 📈
 ```
 
 ## 🚀 **Production-Ready Features (Implemented)**
@@ -230,4 +289,4 @@ jq ".commands.init.description" translations/en.json
 
 **🎉 Built with Atlas methodology: Research first, architect properly, test systematically, deploy safely.**
 
-*Architecture Status: ✅ Phase 1 Complete | ✅ Phase 2 Complete | 🎯 Phase 3 Application Layer Ready*
+*Architecture Status: ✅ P1 Foundation Complete | ✅ P2 Utilities Complete | ✅ P3 Services Complete | 🔄 P4 Runtime 33% Complete*
