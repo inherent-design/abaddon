@@ -15,6 +15,11 @@ readonly ABADDON_HTTP_LOADED=1
     return 1
 }
 
+[[ -n "${ABADDON_PLATFORM_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-http.sh requires abaddon-platform.sh to be loaded first" >&2
+    return 1
+}
+
 [[ -n "${ABADDON_CACHE_LOADED:-}" ]] || {
     echo "ERROR: abaddon-http.sh requires abaddon-cache.sh to be loaded first" >&2
     return 1
@@ -73,31 +78,45 @@ declare -g ABADDON_HTTP_NETWORK_ERRORS=0
 # HTTP Client Detection and Configuration
 # ============================================================================
 
-# Detect available HTTP client
+# Detect available HTTP client using Platform module
 detect_http_client() {
     if [[ "$ABADDON_HTTP_CLIENT_DETECTED" == "true" ]]; then
         return 0
     fi
     
-    log_debug "Detecting available HTTP client"
+    log_debug "Detecting available HTTP client using Platform module"
     
-    # Preference order: curl > wget > fetch
-    if command -v curl >/dev/null 2>&1; then
-        ABADDON_HTTP_CLIENT="curl"
-        log_debug "Using curl as HTTP client"
-    elif command -v wget >/dev/null 2>&1; then
-        ABADDON_HTTP_CLIENT="wget"
-        log_debug "Using wget as HTTP client"
-    elif command -v fetch >/dev/null 2>&1; then
-        ABADDON_HTTP_CLIENT="fetch"
-        log_debug "Using fetch as HTTP client"
+    # Use Platform module's tool detection with preference order
+    local best_client
+    best_client=$(get_best_tool "http_client" 2>/dev/null)
+    
+    if [[ -n "$best_client" && "$best_client" != "none" ]]; then
+        ABADDON_HTTP_CLIENT="$best_client"
+        log_debug "Using $best_client as HTTP client (via Platform detection)"
     else
-        ABADDON_HTTP_CLIENT=""
-        log_error "No HTTP client available (curl, wget, or fetch required)"
-        return 1
+        # Fallback to manual detection if Platform doesn't have http_client category
+        log_debug "Platform http_client category not found, using manual detection"
+        
+        # Preference order: curl > wget > fetch
+        if check_tool "curl"; then
+            ABADDON_HTTP_CLIENT="curl"
+            log_debug "Using curl as HTTP client"
+        elif check_tool "wget"; then
+            ABADDON_HTTP_CLIENT="wget"  
+            log_debug "Using wget as HTTP client"
+        elif check_tool "fetch"; then
+            ABADDON_HTTP_CLIENT="fetch"
+            log_debug "Using fetch as HTTP client"
+        else
+            ABADDON_HTTP_CLIENT=""
+            log_error "No HTTP client available (curl, wget, or fetch required)"
+            ABADDON_HTTP_CLIENT_DETECTED="true"
+            return 1
+        fi
     fi
     
     ABADDON_HTTP_CLIENT_DETECTED="true"
+    log_debug "HTTP client detection complete: $ABADDON_HTTP_CLIENT"
     return 0
 }
 
@@ -337,8 +356,22 @@ execute_curl_request() {
         curl_args+=(--header "$header")
     done
     
-    # Add data for POST/PUT
+    # Add data for POST/PUT with automatic Content-Type detection
     if [[ -n "$data" && ("$method" == "POST" || "$method" == "PUT") ]]; then
+        # Auto-detect JSON data and set Content-Type if not already specified
+        local content_type_set=false
+        for header in "${headers[@]}"; do
+            if [[ "$header" =~ ^[Cc]ontent-[Tt]ype: ]]; then
+                content_type_set=true
+                break
+            fi
+        done
+        
+        # If data looks like JSON and no Content-Type set, add JSON header
+        if [[ "$content_type_set" == "false" && "$data" =~ ^\s*[\{\[] ]]; then
+            curl_args+=(--header "Content-Type: application/json")
+        fi
+        
         curl_args+=(--data "$data")
     fi
     

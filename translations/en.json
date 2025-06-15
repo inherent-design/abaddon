@@ -2,167 +2,65 @@
   "meta": {
     "language": "en",
     "language_name": "English",
-    "version": "1.0.0", 
-    "description": "English translations for Abaddon framework",
-    "last_updated": "2024-01-01",
-    "token_hierarchy": "commands.{command}.{property} | errors.{category} | ui.{element} | system.{component}"
+    "version": "2.0.0", 
+    "description": "English translations for Abaddon HTTP module and P4+ layers",
+    "last_updated": "2025-06-15",
+    "token_hierarchy": "http.{operation} | http.status.{code} | api.{operation} | applications.{domain}"
   },
   
-  "errors": {
-    "file_not_found": "File not found",
-    "invalid_command": "Invalid command",
-    "missing_arguments": "Missing required arguments",
-    "permission_denied": "Permission denied",
-    "invalid_path": "Invalid file path",
-    "tool_not_available": "Required tool not available",
-    "timeout": "Operation timed out",
-    "invalid_format": "Invalid file format",
-    "dependency_missing": "Missing dependency"
-  },
-  
-  "commands": {
-    "init": {
-      "name": "init",
-      "description": "Initialize a new project with default configuration",
-      "usage": "abaddon init [project-name] [--type=TYPE] [--force]",
-      "examples": "abaddon init my-project --type=web\nabaddon init --force"
-    },
-    "build": {
-      "name": "build", 
-      "description": "Build project assets and generate distribution files",
-      "usage": "abaddon build [--target=TARGET] [--debug]",
-      "examples": "abaddon build --target=production\nabaddon build --debug"
-    },
-    "test": {
-      "name": "test",
-      "description": "Run project test suite with coverage reporting",
-      "usage": "abaddon test [--coverage] [--verbose] [PATTERN]",
-      "examples": "abaddon test --coverage\nabaddon test core"
-    },
-    "clean": {
-      "name": "clean",
-      "description": "Clean build artifacts and temporary files",
-      "usage": "abaddon clean [--all] [--cache]",
-      "examples": "abaddon clean --all\nabaddon clean --cache"
-    },
+  "http": {
+    "request_sent": "Request sent to {0}",
+    "response_received": "Response received from {0}",
+    "connection_established": "Connection established",
+    "connection_failed": "Connection failed",
+    "connection_timeout": "Connection timeout",
+    "connection_closed": "Connection closed",
+    "downloading": "Downloading {0}",
+    "download_complete": "Download complete",
+    "upload_complete": "Upload complete",
+    "client_detected": "HTTP client detected: {0}",
+    "user_agent": "Client identified as: {0}",
     "status": {
-      "name": "status",
-      "description": "Show project status and configuration information",
-      "usage": "abaddon status [--verbose] [--tools]",
-      "examples": "abaddon status --verbose\nabaddon status --tools"
+      "200": "Request successful",
+      "201": "Resource created successfully", 
+      "204": "Request successful, no content",
+      "400": "Bad request",
+      "401": "Authentication required",
+      "403": "Access forbidden",
+      "404": "Resource not found",
+      "405": "Method not allowed",
+      "408": "Request timeout",
+      "429": "Too many requests",
+      "500": "Internal server error",
+      "502": "Bad gateway",
+      "503": "Service unavailable",
+      "504": "Gateway timeout"
     }
   },
-  
-  "ui": {
-    "available_commands": "Available Commands",
-    "usage": "Usage",
-    "examples": "Examples", 
-    "options": "Options",
-    "see_also": "See Also",
-    "description": "Description",
-    "arguments": "Arguments",
-    "flags": "Flags",
-    "environment": "Environment",
-    "configuration": "Configuration",
-    "version": "Version",
-    "help": "Help"
+
+  "api": {
+    "parsing_response": "Parsing API response",
+    "parsing_complete": "API response parsed successfully",
+    "parsing_failed": "API response parsing failed: {0}",
+    "field_extracted": "Field '{0}' extracted successfully",
+    "field_not_found": "Field '{0}' not found in response",
+    "format_detected": "Response format detected: {0}",
+    "format_unsupported": "Unsupported response format: {0}",
+    "authentication_required": "API authentication required",
+    "rate_limited": "API rate limit exceeded",
+    "service_error": "API service error: {0}"
   },
   
-  "status": {
-    "success": "Operation completed successfully",
-    "error": "Operation failed",
-    "warning": "Warning",
-    "info": "Information",
-    "debug": "Debug",
-    "processing": "Processing",
-    "complete": "Complete",
-    "failed": "Failed",
-    "cancelled": "Cancelled",
-    "timeout": "Timed out"
-  },
-  
-  "validation": {
-    "required_field": "This field is required",
-    "invalid_format": "Invalid format",
-    "out_of_range": "Value out of range",
-    "file_exists": "File already exists",
-    "directory_exists": "Directory already exists",
-    "invalid_name": "Invalid name format",
-    "invalid_type": "Invalid type specified",
-    "dependency_check_failed": "Dependency check failed"
-  },
-  
-  "tools": {
-    "checking_availability": "Checking tool availability",
-    "tool_available": "available",
-    "tool_not_available": "not available", 
-    "tool_version": "version",
-    "installing_tool": "Installing tool",
-    "tool_installation_failed": "Tool installation failed",
-    "modern_tools": "Modern Tools",
-    "standard_tools": "Standard Tools",
-    "optional_tools": "Optional Tools"
-  },
-  
-  "project": {
-    "initializing": "Initializing project",
-    "project_created": "Project created successfully",
-    "project_exists": "Project already exists",
-    "invalid_project_name": "Invalid project name",
-    "loading_configuration": "Loading configuration",
-    "saving_configuration": "Saving configuration",
-    "configuration_error": "Configuration error",
-    "project_type": "Project Type",
-    "project_name": "Project Name",
-    "project_version": "Project Version"
-  },
-  
-  "build": {
-    "starting_build": "Starting build process",
-    "build_complete": "Build completed successfully",
-    "build_failed": "Build failed",
-    "target_not_found": "Build target not found",
-    "compiling": "Compiling",
-    "bundling": "Bundling",
-    "optimizing": "Optimizing",
-    "generating": "Generating",
-    "copying_assets": "Copying assets",
-    "build_target": "Build Target",
-    "output_directory": "Output Directory"
-  },
-  
-  "testing": {
-    "running_tests": "Running test suite",
-    "tests_passed": "All tests passed",
-    "tests_failed": "Some tests failed",
-    "no_tests_found": "No tests found",
-    "test_coverage": "Test Coverage",
-    "test_results": "Test Results",
-    "running_test": "Running test",
-    "test_passed": "passed",
-    "test_failed": "failed",
-    "test_skipped": "skipped"
-  },
-  
-  "performance": {
-    "execution_time": "Execution time",
-    "memory_usage": "Memory usage",
-    "cache_hit_rate": "Cache hit rate", 
-    "operations_per_second": "Operations per second",
-    "file_operations": "File operations",
-    "network_operations": "Network operations",
-    "cpu_operations": "CPU operations",
-    "performance_report": "Performance Report"
-  },
-  
-  "system": {
-    "platform_detected": "Platform detected",
-    "capabilities": "Capabilities",
-    "environment_check": "Environment check",
-    "dependency_check": "Dependency check",
-    "module_loaded": "Module loaded",
-    "module_failed": "Module failed to load",
-    "initialization_complete": "Initialization complete",
-    "shutdown_complete": "Shutdown complete"
+  "applications": {
+    "welcome": "Welcome to {0}!",
+    "initialized": "Application initialized successfully",
+    "configuration_loaded": "Configuration loaded from {0}",
+    "startup_complete": "Application startup complete",
+    "shutdown_initiated": "Application shutdown initiated",
+    "error_occurred": "Application error: {0}",
+    "feature_enabled": "Feature enabled: {0}",
+    "feature_disabled": "Feature disabled: {0}",
+    "processing_request": "Processing request: {0}",
+    "operation_complete": "Operation completed: {0}"
   }
 }

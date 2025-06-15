@@ -9,6 +9,7 @@ test_http_requires_dependencies() {
 
 test_http_loads_with_dependencies() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -19,6 +20,7 @@ test_http_loads_with_dependencies() {
 # Test HTTP state management
 test_http_state_reset() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -40,6 +42,7 @@ test_http_state_reset() {
 
 test_http_set_error_state() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -54,6 +57,7 @@ test_http_set_error_state() {
 
 test_http_set_success_state() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -69,6 +73,7 @@ test_http_set_success_state() {
 # Test HTTP client detection
 test_http_client_detection() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -88,6 +93,7 @@ test_http_client_detection() {
 # Test URL validation
 test_http_url_validation_valid() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -98,6 +104,7 @@ test_http_url_validation_valid() {
 
 test_http_url_validation_invalid() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -108,6 +115,7 @@ test_http_url_validation_invalid() {
 
 test_http_url_validation_invalid_scheme() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -118,6 +126,7 @@ test_http_url_validation_invalid_scheme() {
 
 test_http_url_validation_file_scheme() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -128,6 +137,7 @@ test_http_url_validation_file_scheme() {
 
 test_http_url_validation_ftp_scheme() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -146,6 +156,7 @@ test_http_url_validation_ftp_scheme() {
 # Test HTTP request input validation
 test_http_request_missing_method() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -156,6 +167,7 @@ test_http_request_missing_method() {
 
 test_http_request_missing_url() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -166,6 +178,7 @@ test_http_request_missing_url() {
 
 test_http_request_invalid_url() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -177,6 +190,7 @@ test_http_request_invalid_url() {
 # Test HTTP GET function
 test_http_get_function_exists() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -188,6 +202,7 @@ test_http_get_function_exists() {
 # Real HTTP integration tests using httpbin.org
 test_http_real_json_get() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -209,6 +224,7 @@ test_http_real_json_get() {
 
 test_http_real_status_codes() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -226,6 +242,7 @@ test_http_real_status_codes() {
 
 test_http_real_user_agent() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -235,7 +252,7 @@ test_http_real_user_agent() {
     http_get "https://httpbin.org/user-agent"
     
     if http_succeeded; then
-        http_parse_response "json" "user-agent"
+        http_parse_response "json" "[\"user-agent\"]"
         if [[ "$(get_kv_value)" == "Abaddon-HTTP/1.0.0" ]]; then
             return 0
         fi
@@ -246,6 +263,7 @@ test_http_real_user_agent() {
 
 test_http_real_post_data() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -267,6 +285,7 @@ test_http_real_post_data() {
 
 test_http_get_state_tracking() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -287,6 +306,7 @@ test_http_get_state_tracking() {
 # Test HTTP POST function
 test_http_post_function_exists() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -297,6 +317,7 @@ test_http_post_function_exists() {
 
 test_http_post_state_tracking() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -316,6 +337,7 @@ test_http_post_state_tracking() {
 # Test HTTP PUT function
 test_http_put_function_exists() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -327,6 +349,7 @@ test_http_put_function_exists() {
 # Test HTTP DELETE function
 test_http_delete_function_exists() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -338,6 +361,7 @@ test_http_delete_function_exists() {
 # Test HTTP response parsing
 test_http_parse_response_function_exists() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -348,6 +372,7 @@ test_http_parse_response_function_exists() {
 
 test_http_parse_response_no_body() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -360,6 +385,7 @@ test_http_parse_response_no_body() {
 
 test_http_parse_response_failed_request() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -375,6 +401,7 @@ test_http_parse_response_failed_request() {
 # Test state accessor functions
 test_http_get_response_accessor() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -387,6 +414,7 @@ test_http_get_response_accessor() {
 
 test_http_get_status_accessor() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -399,6 +427,7 @@ test_http_get_status_accessor() {
 
 test_http_get_status_code_accessor() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -411,6 +440,7 @@ test_http_get_status_code_accessor() {
 
 test_http_get_headers_accessor() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -423,6 +453,7 @@ test_http_get_headers_accessor() {
 
 test_http_get_error_accessor() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -435,6 +466,7 @@ test_http_get_error_accessor() {
 
 test_http_get_last_url_accessor() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -447,6 +479,7 @@ test_http_get_last_url_accessor() {
 
 test_http_get_last_method_accessor() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -459,6 +492,7 @@ test_http_get_last_method_accessor() {
 
 test_http_get_execution_time_accessor() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -472,6 +506,7 @@ test_http_get_execution_time_accessor() {
 # Test success/failure check functions
 test_http_succeeded_function() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -483,6 +518,7 @@ test_http_succeeded_function() {
 
 test_http_failed_function() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -495,6 +531,7 @@ test_http_failed_function() {
 # Test HTTP statistics
 test_http_stats_function_exists() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -505,6 +542,7 @@ test_http_stats_function_exists() {
 
 test_http_stats_output() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -517,6 +555,7 @@ test_http_stats_output() {
 # Test module validation
 test_http_validate_function_exists() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -527,6 +566,7 @@ test_http_validate_function_exists() {
 
 test_http_validate_success() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -544,6 +584,7 @@ test_http_validate_success() {
 # Test module information
 test_http_info_function_exists() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -554,6 +595,7 @@ test_http_info_function_exists() {
 
 test_http_info_output() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -566,6 +608,7 @@ test_http_info_output() {
 # Test configuration variables
 test_http_configuration_defaults() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -584,6 +627,7 @@ test_http_environment_override() {
     export ABADDON_HTTP_USER_AGENT="CustomAgent/1.0"
     
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -596,6 +640,7 @@ test_http_environment_override() {
 # Performance and integration tests
 test_http_request_tracking() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -612,6 +657,7 @@ test_http_request_tracking() {
 # Test curl-specific functionality
 test_http_curl_args_construction() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -624,6 +670,7 @@ test_http_curl_args_construction() {
 # Test wget-specific functionality  
 test_http_wget_args_construction() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -636,6 +683,7 @@ test_http_wget_args_construction() {
 # Test fetch-specific functionality
 test_http_fetch_args_construction() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
