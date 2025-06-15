@@ -9,6 +9,7 @@ test_kv_requires_dependencies() {
 
 test_kv_loads_with_dependencies() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -18,26 +19,28 @@ test_kv_loads_with_dependencies() {
 # Test KV state management
 test_kv_state_reset() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
     
     # Set some state first
-    KV_STATE_VALUE="test value"
-    KV_STATE_STATUS="success"
-    KV_STATE_FORMAT="json"
-    KV_STATE_TOOL="jq"
+    ABADDON_KV_VALUE="test value"
+    ABADDON_KV_STATUS="success"
+    ABADDON_KV_FORMAT="json"
+    ABADDON_KV_TOOL="jq"
     
     reset_kv_state
     
-    [[ -z "${KV_STATE_VALUE:-}" ]] && \
-    [[ -z "${KV_STATE_STATUS:-}" ]] && \
-    [[ -z "${KV_STATE_FORMAT:-}" ]] && \
-    [[ -z "${KV_STATE_TOOL:-}" ]]
+    [[ -z "${ABADDON_KV_VALUE:-}" ]] && \
+    [[ -z "${ABADDON_KV_STATUS:-}" ]] && \
+    [[ -z "${ABADDON_KV_FORMAT:-}" ]] && \
+    [[ -z "${ABADDON_KV_TOOL:-}" ]]
 }
 
 test_kv_set_error_state() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -45,12 +48,13 @@ test_kv_set_error_state() {
     reset_kv_state
     set_kv_error "test error message"
     
-    [[ "${KV_STATE_STATUS:-}" == "error" ]] && \
-    [[ "${KV_STATE_VALUE:-}" == "test error message" ]]
+    [[ "${ABADDON_KV_STATUS:-}" == "error" ]] && \
+    [[ "${ABADDON_KV_VALUE:-}" == "test error message" ]]
 }
 
 test_kv_set_success_state() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -58,29 +62,28 @@ test_kv_set_success_state() {
     reset_kv_state
     set_kv_success "success value"
     
-    [[ "${KV_STATE_STATUS:-}" == "success" ]] && \
-    [[ "${KV_STATE_VALUE:-}" == "success value" ]]
+    [[ "${ABADDON_KV_STATUS:-}" == "success" ]] && \
+    [[ "${ABADDON_KV_VALUE:-}" == "success value" ]]
 }
 
-# Test tool detection
-test_kv_detect_tools() {
+# Test tool detection via Platform
+test_kv_platform_tool_detection() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
     
-    detect_kv_tools >/dev/null 2>&1
-    
-    [[ "${KV_TOOLS_DETECTED:-}" == "true" ]]
+    # Test that Platform's tool detection is available
+    declare -F get_best_tool >/dev/null && declare -F check_tool >/dev/null
 }
 
 test_kv_get_tool_for_format_json() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
-    
-    detect_kv_tools >/dev/null 2>&1
     
     if command -v jq >/dev/null 2>&1; then
         local tool
@@ -93,11 +96,10 @@ test_kv_get_tool_for_format_json() {
 
 test_kv_get_tool_for_format_yaml() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
-    
-    detect_kv_tools >/dev/null 2>&1
     
     if command -v yq >/dev/null 2>&1; then
         local tool
@@ -110,11 +112,8 @@ test_kv_get_tool_for_format_yaml() {
 
 test_kv_get_tool_for_format_invalid() {
     source "$(get_module_path core)"
-    source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
-    
-    detect_kv_tools >/dev/null 2>&1
     
     get_tool_for_format "invalid_format" >/dev/null 2>&1
 }
@@ -122,6 +121,7 @@ test_kv_get_tool_for_format_invalid() {
 # Test file format detection
 test_kv_detect_format_json() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -132,7 +132,7 @@ test_kv_detect_format_json() {
     
     detect_file_format "$test_file" >/dev/null 2>&1
     local result=$?
-    local format="${KV_STATE_FORMAT:-}"
+    local format="${ABADDON_KV_FORMAT:-}"
     
     # Cleanup
     rm -f "$test_file"
@@ -142,6 +142,7 @@ test_kv_detect_format_json() {
 
 test_kv_detect_format_yaml() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -155,7 +156,7 @@ EOF
     
     detect_file_format "$test_file" >/dev/null 2>&1
     local result=$?
-    local format="${KV_STATE_FORMAT:-}"
+    local format="${ABADDON_KV_FORMAT:-}"
     
     # Cleanup
     rm -f "$test_file"
@@ -165,6 +166,7 @@ EOF
 
 test_kv_detect_format_nonexistent() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -175,6 +177,7 @@ test_kv_detect_format_nonexistent() {
 # Test cached extraction
 test_kv_execute_cached_extraction_json() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -190,12 +193,11 @@ test_kv_execute_cached_extraction_json() {
     
     # Initialize required state
     reset_kv_state
-    detect_kv_tools >/dev/null 2>&1
     detect_file_format "$test_file" >/dev/null 2>&1
     
     execute_cached_extraction "$test_file" "project.name" "default" >/dev/null 2>&1
     local result=$?
-    local value="${KV_STATE_VALUE:-}"
+    local value="${ABADDON_KV_VALUE:-}"
     
     # Cleanup
     rm -f "$test_file"
@@ -205,6 +207,7 @@ test_kv_execute_cached_extraction_json() {
 
 test_kv_execute_cached_extraction_with_default() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -220,12 +223,11 @@ test_kv_execute_cached_extraction_with_default() {
     
     # Initialize required state
     reset_kv_state
-    detect_kv_tools >/dev/null 2>&1
     detect_file_format "$test_file" >/dev/null 2>&1
     
     execute_cached_extraction "$test_file" "project.missing" "default_value" >/dev/null 2>&1
     local result=$?
-    local value="${KV_STATE_VALUE:-}"
+    local value="${ABADDON_KV_VALUE:-}"
     
     # Cleanup
     rm -f "$test_file"
@@ -236,6 +238,7 @@ test_kv_execute_cached_extraction_with_default() {
 # Test main KV interface
 test_kv_get_config_value_json() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -273,6 +276,7 @@ EOF
 
 test_kv_get_config_value_yaml() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -306,6 +310,7 @@ EOF
 
 test_kv_get_config_value_missing_file() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -315,6 +320,7 @@ test_kv_get_config_value_missing_file() {
 
 test_kv_get_config_value_missing_key() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -342,6 +348,7 @@ test_kv_get_config_value_missing_key() {
 # Test key existence checking
 test_kv_key_exists_present() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -366,6 +373,7 @@ test_kv_key_exists_present() {
 
 test_kv_key_exists_missing() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -392,6 +400,7 @@ test_kv_key_exists_missing() {
 # Test batch operations
 test_kv_get_config_values_batch() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -423,6 +432,7 @@ EOF
 
 test_kv_get_config_values_mixed_results() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -447,6 +457,7 @@ test_kv_get_config_values_mixed_results() {
 # Test config file validation
 test_kv_validate_config_file_valid() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -466,6 +477,7 @@ test_kv_validate_config_file_valid() {
 
 test_kv_validate_config_file_invalid() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -486,6 +498,7 @@ test_kv_validate_config_file_invalid() {
 # Test state accessor functions
 test_kv_get_status() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -499,6 +512,7 @@ test_kv_get_status() {
 
 test_kv_get_value() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -512,11 +526,12 @@ test_kv_get_value() {
 
 test_kv_get_format() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
     
-    KV_STATE_FORMAT="json"
+    ABADDON_KV_FORMAT="json"
     local format
     format=$(get_kv_format)
     
@@ -525,11 +540,12 @@ test_kv_get_format() {
 
 test_kv_get_tool() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
     
-    KV_STATE_TOOL="jq"
+    ABADDON_KV_TOOL="jq"
     local tool
     tool=$(get_kv_tool)
     
@@ -538,6 +554,7 @@ test_kv_get_tool() {
 
 test_kv_succeeded() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -548,6 +565,7 @@ test_kv_succeeded() {
 
 test_kv_failed() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -558,6 +576,7 @@ test_kv_failed() {
 
 test_kv_succeeded_false_on_error() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -570,6 +589,7 @@ test_kv_succeeded_false_on_error() {
 
 test_kv_failed_false_on_success() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -583,6 +603,7 @@ test_kv_failed_false_on_success() {
 # Test statistics
 test_kv_get_stats() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -607,6 +628,7 @@ test_kv_get_stats() {
 # Test module validation
 test_kv_validate_module() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -616,6 +638,7 @@ test_kv_validate_module() {
 
 test_kv_info_output() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -627,6 +650,7 @@ test_kv_info_output() {
 # Test complex scenarios
 test_kv_array_access() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -660,6 +684,7 @@ EOF
 
 test_kv_nested_objects() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -698,6 +723,7 @@ EOF
 
 test_kv_cache_behavior() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
@@ -727,6 +753,77 @@ test_kv_cache_behavior() {
     [[ "$value1" == "$value2" ]] && [[ "$value1" == "cached-value" ]]
 }
 
+# Test new string extraction API
+test_kv_extract_string_json() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    source "$(get_module_path cache)"
+    source "$(get_module_path validation)"
+    source "$(get_module_path kv)"
+    
+    # Skip if jq not available
+    if ! command -v jq >/dev/null 2>&1; then
+        return 0
+    fi
+    
+    # Test JSON string extraction
+    local json_data='{"app": {"name": "test-app", "version": "1.0.0"}}'
+    kv_extract_string "app.name" "json" "$json_data" "default"
+    
+    [[ "$(get_kv_value)" == "test-app" ]] && [[ "$(get_kv_status)" == "success" ]]
+}
+
+test_kv_extract_string_missing_key() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    source "$(get_module_path cache)"
+    source "$(get_module_path validation)"
+    source "$(get_module_path kv)"
+    
+    # Skip if jq not available
+    if ! command -v jq >/dev/null 2>&1; then
+        return 0
+    fi
+    
+    # Test missing key with default
+    local json_data='{"app": {"name": "test-app"}}'
+    kv_extract_string "app.missing" "json" "$json_data" "default_value"
+    
+    [[ "$(get_kv_value)" == "default_value" ]] && [[ "$(get_kv_status)" == "success" ]]
+}
+
+test_kv_extract_string_invalid_format() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    source "$(get_module_path cache)"
+    source "$(get_module_path validation)"
+    source "$(get_module_path kv)"
+    
+    # Test unsupported format
+    kv_extract_string "key" "xml" "<root><key>value</key></root>" "default"
+}
+
+test_kv_extract_string_yaml() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    source "$(get_module_path cache)"
+    source "$(get_module_path validation)"
+    source "$(get_module_path kv)"
+    
+    # Skip if yq not available
+    if ! command -v yq >/dev/null 2>&1; then
+        return 0
+    fi
+    
+    # Test YAML string extraction  
+    local yaml_data="app:
+  name: yaml-app
+  version: 2.0.0"
+    kv_extract_string "app.name" "yaml" "$yaml_data" "default"
+    
+    [[ "$(get_kv_value)" == "yaml-app" ]] && [[ "$(get_kv_status)" == "success" ]]
+}
+
 # Register all KV tests
 run_test "KV module requires dependencies (dependency check)" test_kv_requires_dependencies false
 run_test "KV module loads with all dependencies" test_kv_loads_with_dependencies
@@ -735,7 +832,7 @@ run_test "KV state reset clears all state" test_kv_state_reset
 run_test "Set KV error state works" test_kv_set_error_state
 run_test "Set KV success state works" test_kv_set_success_state
 
-run_test "KV tool detection runs successfully" test_kv_detect_tools
+run_test "KV platform tool detection integration works" test_kv_platform_tool_detection
 
 if command -v jq >/dev/null 2>&1; then
     run_test "Get tool for JSON format returns jq" test_kv_get_tool_for_format_json
@@ -796,6 +893,22 @@ if command -v jq >/dev/null 2>&1; then
     run_test_with_output "KV stats output includes statistics header" test_kv_get_stats "KV Statistics" contains
 else
     skip_test "KV statistics test" "jq not available"
+fi
+
+# New KV string extraction tests
+if command -v jq >/dev/null 2>&1; then
+    run_test "KV string extraction: JSON data" test_kv_extract_string_json
+    run_test "KV string extraction: missing key with default" test_kv_extract_string_missing_key
+else
+    skip_test "KV string extraction JSON tests" "jq not available"
+fi
+
+run_test "KV string extraction: invalid format fails" test_kv_extract_string_invalid_format false
+
+if command -v yq >/dev/null 2>&1; then
+    run_test "KV string extraction: YAML data" test_kv_extract_string_yaml
+else
+    skip_test "KV string extraction YAML tests" "yq not available"
 fi
 
 run_test "KV module validation passes" test_kv_validate_module

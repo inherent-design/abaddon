@@ -15,15 +15,20 @@ readonly ABADDON_VALIDATION_LOADED=1
     return 1
 }
 
+[[ -n "${ABADDON_PLATFORM_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-validation.sh requires abaddon-platform.sh to be loaded first" >&2
+    return 1
+}
+
 # State variables for validation results
-declare -g VALIDATION_STATE_STATUS=""
-declare -g VALIDATION_STATE_ERROR=""
-declare -g VALIDATION_STATE_DETAILS=""
+declare -g ABADDON_VALIDATION_STATUS=""
+declare -g ABADDON_VALIDATION_ERROR_MESSAGE=""
+declare -g ABADDON_VALIDATION_DETAILS=""
 
 # Validation result constants
-readonly VALIDATION_SUCCESS="success"
-readonly VALIDATION_ERROR="error"
-readonly VALIDATION_WARNING="warning"
+readonly ABADDON_VALIDATION_SUCCESS="success"
+readonly ABADDON_VALIDATION_ERROR="error"
+readonly ABADDON_VALIDATION_WARNING="warning"
 
 # ============================================================================
 # Core Validation Functions
@@ -31,9 +36,9 @@ readonly VALIDATION_WARNING="warning"
 
 # Reset validation state
 reset_validation_state() {
-    VALIDATION_STATE_STATUS=""
-    VALIDATION_STATE_ERROR=""
-    VALIDATION_STATE_DETAILS=""
+    ABADDON_VALIDATION_STATUS=""
+    ABADDON_VALIDATION_ERROR_MESSAGE=""
+    ABADDON_VALIDATION_DETAILS=""
 }
 
 # Set validation error state
@@ -41,9 +46,9 @@ set_validation_error() {
     local error_message="$1"
     local details="${2:-}"
     
-    VALIDATION_STATE_STATUS="$VALIDATION_ERROR"
-    VALIDATION_STATE_ERROR="$error_message"
-    VALIDATION_STATE_DETAILS="$details"
+    ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_ERROR"
+    ABADDON_VALIDATION_ERROR_MESSAGE="$error_message"
+    ABADDON_VALIDATION_DETAILS="$details"
     
     log_debug "Validation error: $error_message"
     return 1
@@ -53,9 +58,9 @@ set_validation_error() {
 set_validation_success() {
     local details="${1:-}"
     
-    VALIDATION_STATE_STATUS="$VALIDATION_SUCCESS"
-    VALIDATION_STATE_ERROR=""
-    VALIDATION_STATE_DETAILS="$details"
+    ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_SUCCESS"
+    ABADDON_VALIDATION_ERROR_MESSAGE=""
+    ABADDON_VALIDATION_DETAILS="$details"
     
     log_debug "Validation success: $details"
     return 0
@@ -215,16 +220,16 @@ normalize_query_path() {
     esac
     
     # Store result in state variable instead of echo (no stdout pollution)
-    VALIDATION_STATE_DETAILS="$normalized_path"
-    VALIDATION_STATE_STATUS="$VALIDATION_SUCCESS"
-    VALIDATION_STATE_ERROR=""
+    ABADDON_VALIDATION_DETAILS="$normalized_path"
+    ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_SUCCESS"
+    ABADDON_VALIDATION_ERROR_MESSAGE=""
     log_debug "Path normalized for $tool: $normalized_path"
     return 0
 }
 
 # Get the normalized path from last normalization
 get_normalized_path() {
-    echo "$VALIDATION_STATE_DETAILS"
+    echo "$ABADDON_VALIDATION_DETAILS"
 }
 
 # ============================================================================
@@ -250,84 +255,84 @@ validate_and_extract() {
     
     case "$format" in
         json)
-            tool="jq"
-            if command -v jq >/dev/null 2>&1; then
+            tool=$(get_best_tool "json_processing")
+            if [[ "$tool" != "none" ]]; then
                 if [[ -n "$abaddon_path" ]]; then
                     if normalize_query_path "$tool" "$abaddon_path"; then
                         local normalized_path
                         normalized_path=$(get_normalized_path)
-                        extracted_value=$(echo "$content" | jq -r "$normalized_path // empty" 2>/dev/null)
+                        extracted_value=$(echo "$content" | "$tool" -r "$normalized_path // empty" 2>/dev/null)
                     fi
                 else
                     # Just validate content without extraction
-                    if echo "$content" | jq empty 2>/dev/null; then
+                    if echo "$content" | "$tool" empty 2>/dev/null; then
                         extracted_value="valid"
                     fi
                 fi
             else
-                set_validation_error "jq not available for JSON processing"
+                set_validation_error "No tool available for JSON processing"
                 return $?
             fi
             ;;
         yaml|yml)
-            tool="yq"
-            if command -v yq >/dev/null 2>&1; then
+            tool=$(get_best_tool "yaml_processing")
+            if [[ "$tool" != "none" ]]; then
                 if [[ -n "$abaddon_path" ]]; then
                     if normalize_query_path "$tool" "$abaddon_path"; then
                         local normalized_path
                         normalized_path=$(get_normalized_path)
-                        extracted_value=$(echo "$content" | yq eval "$normalized_path // null" 2>/dev/null)
+                        extracted_value=$(echo "$content" | "$tool" eval "$normalized_path // \"null\"" 2>/dev/null)
                     fi
                 else
                     # Just validate content without extraction
-                    if echo "$content" | yq eval 'length' >/dev/null 2>&1; then
+                    if echo "$content" | "$tool" eval 'length' >/dev/null 2>&1; then
                         extracted_value="valid"
                     fi
                 fi
             else
-                set_validation_error "yq not available for YAML processing"
+                set_validation_error "No tool available for YAML processing"
                 return $?
             fi
             ;;
         toml)
-            tool="tq"
-            if command -v tq >/dev/null 2>&1; then
+            tool=$(get_best_tool "toml_processing")
+            if [[ "$tool" != "none" ]]; then
                 if [[ -n "$abaddon_path" ]]; then
                     if normalize_query_path "$tool" "$abaddon_path"; then
                         local normalized_path
                         normalized_path=$(get_normalized_path)
-                        extracted_value=$(echo "$content" | tq -r "$normalized_path // empty" 2>/dev/null)
+                        extracted_value=$(echo "$content" | "$tool" -r "$normalized_path // empty" 2>/dev/null)
                     fi
                 else
                     # Basic TOML validation
-                    if echo "$content" | tq '.' >/dev/null 2>&1; then
+                    if echo "$content" | "$tool" '.' >/dev/null 2>&1; then
                         extracted_value="valid"
                     fi
                 fi
             else
-                set_validation_error "tq not available for TOML processing"
+                set_validation_error "No tool available for TOML processing"
                 return $?
             fi
             ;;
         xml)
-            tool="xq"
-            if command -v xq >/dev/null 2>&1; then
+            tool=$(get_best_tool "xml_processing")
+            if [[ "$tool" != "none" ]]; then
                 if [[ -n "$abaddon_path" ]]; then
                     if normalize_query_path "$tool" "$abaddon_path"; then
                         local normalized_path
                         normalized_path=$(get_normalized_path)
                         # xq uses CSS selectors, convert simple paths to CSS
                         local css_selector="${normalized_path//\./ }"
-                        extracted_value=$(echo "$content" | xq -q "$css_selector" 2>/dev/null | head -1)
+                        extracted_value=$(echo "$content" | "$tool" -q "$css_selector" 2>/dev/null | head -1)
                     fi
                 else
                     # Basic XML validation - check if it's well-formed
-                    if echo "$content" | xq >/dev/null 2>&1; then
+                    if echo "$content" | "$tool" >/dev/null 2>&1; then
                         extracted_value="valid"
                     fi
                 fi
             else
-                set_validation_error "xq not available for XML processing"
+                set_validation_error "No tool available for XML processing"
                 return $?
             fi
             ;;
@@ -341,9 +346,9 @@ validate_and_extract() {
     if [[ -z "$extracted_value" ]]; then
         if [[ -n "$default_value" ]]; then
             extracted_value="$default_value"
-            VALIDATION_STATE_DETAILS="$extracted_value"
-            VALIDATION_STATE_STATUS="$VALIDATION_SUCCESS"
-            VALIDATION_STATE_ERROR=""
+            ABADDON_VALIDATION_DETAILS="$extracted_value"
+            ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_SUCCESS"
+            ABADDON_VALIDATION_ERROR_MESSAGE=""
             log_debug "Used default value for missing field: $extracted_value"
             return 0
         else
@@ -353,9 +358,9 @@ validate_and_extract() {
     elif [[ "$extracted_value" == "null" ]]; then
         if [[ -n "$default_value" ]]; then
             extracted_value="$default_value"
-            VALIDATION_STATE_DETAILS="$extracted_value"
-            VALIDATION_STATE_STATUS="$VALIDATION_SUCCESS"
-            VALIDATION_STATE_ERROR=""
+            ABADDON_VALIDATION_DETAILS="$extracted_value"
+            ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_SUCCESS"
+            ABADDON_VALIDATION_ERROR_MESSAGE=""
             log_debug "Used default value for null field: $extracted_value"
             return 0
         else
@@ -363,9 +368,9 @@ validate_and_extract() {
             return $?
         fi
     else
-        VALIDATION_STATE_DETAILS="$extracted_value"
-        VALIDATION_STATE_STATUS="$VALIDATION_SUCCESS"
-        VALIDATION_STATE_ERROR=""
+        ABADDON_VALIDATION_DETAILS="$extracted_value"
+        ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_SUCCESS"
+        ABADDON_VALIDATION_ERROR_MESSAGE=""
         log_debug "Successfully extracted value: $extracted_value"
         return 0
     fi
@@ -373,7 +378,7 @@ validate_and_extract() {
 
 # Get extracted value from last validation
 get_extracted_value() {
-    echo "$VALIDATION_STATE_DETAILS"
+    echo "$ABADDON_VALIDATION_DETAILS"
 }
 
 # Validate JSON content
@@ -416,13 +421,17 @@ validate_field_required() {
     local field_value=""
     case "$format" in
         json)
-            if command -v jq >/dev/null 2>&1; then
-                field_value=$(echo "$data_content" | jq -r ".$field_path // empty" 2>/dev/null)
+            local tool
+            tool=$(get_best_tool "json_processing")
+            if [[ "$tool" != "none" ]]; then
+                field_value=$(echo "$data_content" | "$tool" -r ".$field_path // empty" 2>/dev/null)
             fi
             ;;
         yaml)
-            if command -v yq >/dev/null 2>&1; then
-                field_value=$(echo "$data_content" | yq eval ".$field_path // empty" 2>/dev/null)
+            local tool
+            tool=$(get_best_tool "yaml_processing")
+            if [[ "$tool" != "none" ]]; then
+                field_value=$(echo "$data_content" | "$tool" eval ".$field_path // \"empty\"" 2>/dev/null)
             fi
             ;;
         *)
@@ -597,27 +606,87 @@ validate_project_name() {
 
 # Get current validation status
 get_validation_status() {
-    echo "$VALIDATION_STATE_STATUS"
+    echo "$ABADDON_VALIDATION_STATUS"
 }
 
 # Get validation error message
 get_validation_error() {
-    echo "$VALIDATION_STATE_ERROR"
+    echo "$ABADDON_VALIDATION_ERROR_MESSAGE"
 }
 
 # Get validation details
 get_validation_details() {
-    echo "$VALIDATION_STATE_DETAILS"
+    echo "$ABADDON_VALIDATION_DETAILS"
 }
 
 # Check if last validation was successful
 validation_succeeded() {
-    [[ "$VALIDATION_STATE_STATUS" == "$VALIDATION_SUCCESS" ]]
+    [[ "$ABADDON_VALIDATION_STATUS" == "$ABADDON_VALIDATION_SUCCESS" ]]
 }
 
 # Check if last validation failed
 validation_failed() {
-    [[ "$VALIDATION_STATE_STATUS" == "$VALIDATION_ERROR" ]]
+    [[ "$ABADDON_VALIDATION_STATUS" == "$ABADDON_VALIDATION_ERROR" ]]
+}
+
+# ============================================================================
+# Module Validation and Information
+# ============================================================================
+
+# Validate validation module functionality
+validation_validate() {
+    local errors=0
+    
+    # Check required functions exist
+    local required_functions=(
+        "validate_file_path" "validate_file_exists" "validate_json_content"
+        "reset_validation_state" "set_validation_error" "set_validation_success"
+    )
+    
+    for func in "${required_functions[@]}"; do
+        if ! declare -F "$func" >/dev/null; then
+            log_error "Missing function: $func"
+            ((errors++))
+        fi
+    done
+    
+    # Check state variables exist
+    local required_vars=(
+        "ABADDON_VALIDATION_STATUS" "ABADDON_VALIDATION_ERROR" "ABADDON_VALIDATION_DETAILS"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            log_error "Missing state variable: $var"
+            ((errors++))
+        fi
+    done
+    
+    # Check dependencies are loaded
+    if [[ -z "${ABADDON_CORE_LOADED:-}" ]]; then
+        log_error "Core dependency not loaded"
+        ((errors++))
+    fi
+    
+    if [[ -z "${ABADDON_PLATFORM_LOADED:-}" ]]; then
+        log_error "Platform dependency not loaded"
+        ((errors++))
+    fi
+    
+    return $errors
+}
+
+# Module information
+validation_info() {
+    echo "Abaddon Validation - Security & tool path normalization"
+    echo "Version: 1.0.0"
+    echo "Dependencies: core.sh, platform.sh"
+    echo "Features: Path validation, content validation, tool normalization"
+    echo "Main Functions:"
+    echo "  validate_file_path(path, [allow_absolute])"
+    echo "  validate_and_extract(format, content, path, [default])"
+    echo "  normalize_query_path(abaddon_path, tool)"
+    echo "  validate_json_content(content)"
 }
 
 log_debug "Abaddon validation module loaded"
