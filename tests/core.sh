@@ -147,8 +147,10 @@ test_core_require_env_var_missing() {
 # Test file operations
 test_core_ensure_directory_create() {
     source "$(get_module_path core)"
-    TEST_TEMP_DIR=1  # Enable temp directory
+    local TEST_TEMP_DIR="/tmp/abaddon_test_$$"
     ensure_directory "$TEST_TEMP_DIR/test_dir"
+    # Cleanup
+    rm -rf "$TEST_TEMP_DIR"
 }
 
 test_core_ensure_directory_existing() {
