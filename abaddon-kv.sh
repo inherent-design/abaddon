@@ -51,6 +51,9 @@ readonly ABADDON_KV_INVALID_FILE="invalid_file"
 declare -g ABADDON_KV_OPERATIONS=0
 declare -g ABADDON_KV_CACHE_HITS=0
 
+# KV module state variables (following framework pattern)
+declare -g ABADDON_KV_ERROR_MESSAGE=""
+
 # ============================================================================
 # Tool Management - Uses Platform Authority
 # ============================================================================
@@ -146,35 +149,129 @@ detect_file_format() {
 }
 
 # ============================================================================
-# Core KV Operations with Caching
+# MODULE CONTRACT INTERFACE (MANDATORY for all Abaddon modules)
 # ============================================================================
 
-# Reset KV state
-reset_kv_state() {
+# Clear all KV module state variables
+clear_kv_state() {
     ABADDON_KV_VALUE=""
     ABADDON_KV_STATUS=""
+    ABADDON_KV_ERROR_MESSAGE=""
     ABADDON_KV_FORMAT=""
     ABADDON_KV_TOOL=""
     ABADDON_KV_FILE=""
     ABADDON_KV_PATH=""
     ABADDON_KV_SOURCE=""
+    ABADDON_KV_OPERATIONS=0
+    ABADDON_KV_CACHE_HITS=0
+    log_debug "KV module state cleared"
+}
+
+# Return module status: "ready|error|incomplete|unknown"
+get_kv_status() {
+    if [[ "$ABADDON_KV_STATUS" == "$ABADDON_KV_SUCCESS" ]]; then
+        echo "ready"
+    elif [[ "$ABADDON_KV_STATUS" == "$ABADDON_KV_ERROR" ]]; then
+        echo "error"
+    elif [[ -n "${ABADDON_CORE_LOADED:-}" && -n "${ABADDON_PLATFORM_LOADED:-}" && -n "${ABADDON_CACHE_LOADED:-}" && -n "${ABADDON_VALIDATION_LOADED:-}" ]]; then
+        echo "ready"
+    else
+        echo "incomplete"
+    fi
+}
+
+# Export KV state for cross-module access
+export_kv_state() {
+    echo "ABADDON_KV_STATUS='$ABADDON_KV_STATUS'"
+    echo "ABADDON_KV_ERROR_MESSAGE='$ABADDON_KV_ERROR_MESSAGE'"
+    echo "ABADDON_KV_VALUE='$ABADDON_KV_VALUE'"
+    echo "ABADDON_KV_FORMAT='$ABADDON_KV_FORMAT'"
+    echo "ABADDON_KV_TOOL='$ABADDON_KV_TOOL'"
+    echo "ABADDON_KV_FILE='$ABADDON_KV_FILE'"
+    echo "ABADDON_KV_PATH='$ABADDON_KV_PATH'"
+    echo "ABADDON_KV_SOURCE='$ABADDON_KV_SOURCE'"
+    echo "ABADDON_KV_OPERATIONS='$ABADDON_KV_OPERATIONS'"
+    echo "ABADDON_KV_CACHE_HITS='$ABADDON_KV_CACHE_HITS'"
+}
+
+# Validate KV module state consistency
+validate_kv_state() {
+    local errors=0
+    local validation_messages=()
+    
+    # Check required functions exist
+    local required_functions=(
+        "get_config_value" "kv_key_exists" "get_config_values" "detect_file_format"
+        "clear_kv_state" "get_kv_status" "export_kv_state"
+    )
+    
+    for func in "${required_functions[@]}"; do
+        if ! declare -F "$func" >/dev/null 2>&1; then
+            validation_messages+=("Missing function: $func")
+            ((errors++))
+        fi
+    done
+    
+    # Check state variables exist
+    local required_vars=(
+        "ABADDON_KV_STATUS" "ABADDON_KV_ERROR_MESSAGE" "ABADDON_KV_VALUE"
+        "ABADDON_KV_FORMAT" "ABADDON_KV_TOOL" "ABADDON_KV_FILE" "ABADDON_KV_PATH"
+    )
+    
+    for var in "${required_vars[@]}"; do
+        if ! declare -p "$var" >/dev/null 2>&1; then
+            validation_messages+=("Missing state variable: $var")
+            ((errors++))
+        fi
+    done
+    
+    # Check dependencies are loaded
+    local required_deps=(
+        "ABADDON_CORE_LOADED" "ABADDON_PLATFORM_LOADED" 
+        "ABADDON_CACHE_LOADED" "ABADDON_VALIDATION_LOADED"
+    )
+    
+    for dep in "${required_deps[@]}"; do
+        if [[ -z "${!dep:-}" ]]; then
+            validation_messages+=("Required dependency not loaded: ${dep/_LOADED/}")
+            ((errors++))
+        fi
+    done
+    
+    # Output validation results
+    if [[ $errors -eq 0 ]]; then
+        log_debug "KV module validation: PASSED"
+        return 0
+    else
+        log_error "KV module validation: FAILED ($errors errors)"
+        for msg in "${validation_messages[@]}"; do
+            log_error "  - $msg"
+        done
+        return 1
+    fi
 }
 
 # Set KV error state
 set_kv_error() {
     local error_message="$1"
-    ABADDON_KV_VALUE="$error_message"
-    ABADDON_KV_STATUS="error"
+    ABADDON_KV_STATUS="$ABADDON_KV_ERROR"
+    ABADDON_KV_ERROR_MESSAGE="$error_message"
+    ABADDON_KV_VALUE="$error_message"  # KV interface: VALUE stores both results and errors
     log_error "KV Error: $error_message"
 }
 
 # Set KV success state
 set_kv_success() {
     local value="$1"
-    ABADDON_KV_VALUE="$value"
     ABADDON_KV_STATUS="$ABADDON_KV_SUCCESS"
+    ABADDON_KV_ERROR_MESSAGE=""
+    ABADDON_KV_VALUE="$value"
     log_debug "KV Success: extracted value"
 }
+
+# ============================================================================
+# Core KV Operations with Caching
+# ============================================================================
 
 # Execute cached file parsing
 execute_cached_extraction() {
@@ -232,7 +329,7 @@ get_config_value() {
     local file_path="$2"
     local default_value="${3:-}"
 
-    reset_kv_state
+    clear_kv_state
     ABADDON_KV_FILE="$file_path"
     ABADDON_KV_PATH="$abaddon_path"
 
@@ -288,7 +385,7 @@ kv_extract_string() {
     local data="$3"
     local default_value="${4:-}"
 
-    reset_kv_state
+    clear_kv_state
     ABADDON_KV_PATH="$path"
     ABADDON_KV_FORMAT="$format"
     ABADDON_KV_SOURCE="string"
@@ -420,7 +517,7 @@ validate_config_file() {
     local file_path="$1"
     local schema_file="${2:-}"
 
-    reset_kv_state
+    clear_kv_state
 
     # Validate file exists
     if ! validate_file_exists "$file_path"; then

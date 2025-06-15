@@ -30,7 +30,7 @@ test_kv_state_reset() {
     ABADDON_KV_FORMAT="json"
     ABADDON_KV_TOOL="jq"
     
-    reset_kv_state
+    clear_kv_state
     
     [[ -z "${ABADDON_KV_VALUE:-}" ]] && \
     [[ -z "${ABADDON_KV_STATUS:-}" ]] && \
@@ -45,7 +45,7 @@ test_kv_set_error_state() {
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
     
-    reset_kv_state
+    clear_kv_state
     set_kv_error "test error message"
     
     [[ "${ABADDON_KV_STATUS:-}" == "error" ]] && \
@@ -59,7 +59,7 @@ test_kv_set_success_state() {
     source "$(get_module_path validation)"
     source "$(get_module_path kv)"
     
-    reset_kv_state
+    clear_kv_state
     set_kv_success "success value"
     
     [[ "${ABADDON_KV_STATUS:-}" == "success" ]] && \
@@ -192,7 +192,7 @@ test_kv_execute_cached_extraction_json() {
     echo '{"project": {"name": "test-project"}}' > "$test_file"
     
     # Initialize required state
-    reset_kv_state
+    clear_kv_state
     detect_file_format "$test_file" >/dev/null 2>&1
     
     execute_cached_extraction "$test_file" "project.name" "default" >/dev/null 2>&1
@@ -222,7 +222,7 @@ test_kv_execute_cached_extraction_with_default() {
     echo '{"project": {}}' > "$test_file"
     
     # Initialize required state
-    reset_kv_state
+    clear_kv_state
     detect_file_format "$test_file" >/dev/null 2>&1
     
     execute_cached_extraction "$test_file" "project.missing" "default_value" >/dev/null 2>&1
