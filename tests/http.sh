@@ -11,8 +11,10 @@ test_http_loads_with_dependencies() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     [[ "${ABADDON_HTTP_LOADED:-}" == "1" ]]
 }
@@ -22,8 +24,10 @@ test_http_state_reset() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Set some state first
@@ -44,8 +48,10 @@ test_http_set_error_state() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     clear_http_state
@@ -59,8 +65,10 @@ test_http_set_success_state() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     clear_http_state
@@ -75,8 +83,10 @@ test_http_client_detection() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Reset detection state
@@ -90,57 +100,67 @@ test_http_client_detection() {
     [[ "${ABADDON_HTTP_CLIENT_DETECTED:-}" == "true" ]]
 }
 
-# Test URL validation
-test_http_url_validation_valid() {
+# Test URL security
+test_http_url_security_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     validate_url "https://example.com"
 }
 
-test_http_url_validation_invalid() {
+test_http_url_security_invalid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     validate_url "not-a-url"
 }
 
-test_http_url_validation_invalid_scheme() {
+test_http_url_security_invalid_scheme() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     validate_url "ssh://example.com"
 }
 
-test_http_url_validation_file_scheme() {
+test_http_url_security_file_scheme() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     validate_url "file:///tmp/test.txt"
 }
 
-test_http_url_validation_ftp_scheme() {
+test_http_url_security_ftp_scheme() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     if command -v curl >/dev/null 2>&1; then
@@ -153,13 +173,15 @@ test_http_url_validation_ftp_scheme() {
     fi
 }
 
-# Test HTTP request input validation
+# Test HTTP request input security
 test_http_request_missing_method() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     http_request "" "https://example.com"
@@ -169,8 +191,10 @@ test_http_request_missing_url() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     http_request "GET" ""
@@ -180,8 +204,10 @@ test_http_request_invalid_url() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     http_request "GET" "not-a-url"
@@ -192,8 +218,10 @@ test_http_get_function_exists() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     declare -F http_get >/dev/null
@@ -204,8 +232,10 @@ test_http_real_json_get() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Test real HTTP GET with JSON response
@@ -226,8 +256,10 @@ test_http_real_status_codes() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Test 404 status
@@ -244,8 +276,10 @@ test_http_real_user_agent() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Test custom user agent
@@ -265,8 +299,10 @@ test_http_real_post_data() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Test POST with JSON data
@@ -287,8 +323,10 @@ test_http_get_state_tracking() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Mock successful execution (skip actual network call)
@@ -308,8 +346,10 @@ test_http_post_function_exists() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     declare -F http_post >/dev/null
@@ -319,8 +359,10 @@ test_http_post_state_tracking() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Test that state variables are set correctly
@@ -339,8 +381,10 @@ test_http_put_function_exists() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     declare -F http_put >/dev/null
@@ -351,8 +395,10 @@ test_http_delete_function_exists() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     declare -F http_delete >/dev/null
@@ -363,8 +409,10 @@ test_http_parse_response_function_exists() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     declare -F http_parse_response >/dev/null
@@ -374,8 +422,10 @@ test_http_parse_response_no_body() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     clear_http_state
@@ -387,8 +437,10 @@ test_http_parse_response_failed_request() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     clear_http_state
@@ -403,8 +455,10 @@ test_http_get_response_accessor() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     ABADDON_HTTP_RESPONSE_BODY="test response"
@@ -416,8 +470,10 @@ test_http_get_status_accessor() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     ABADDON_HTTP_STATUS="success"
@@ -429,8 +485,10 @@ test_http_get_status_code_accessor() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     ABADDON_HTTP_STATUS_CODE="200"
@@ -442,8 +500,10 @@ test_http_get_headers_accessor() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     ABADDON_HTTP_RESPONSE_HEADERS="Content-Type: application/json"
@@ -455,8 +515,10 @@ test_http_get_error_accessor() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     ABADDON_HTTP_ERROR_MESSAGE="test error"
@@ -468,8 +530,10 @@ test_http_get_last_url_accessor() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     ABADDON_HTTP_LAST_URL="https://example.com"
@@ -481,8 +545,10 @@ test_http_get_last_method_accessor() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     ABADDON_HTTP_LAST_METHOD="POST"
@@ -494,8 +560,10 @@ test_http_get_execution_time_accessor() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     ABADDON_HTTP_EXECUTION_TIME="150ms"
@@ -508,8 +576,10 @@ test_http_succeeded_function() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     ABADDON_HTTP_STATUS="success"
@@ -520,8 +590,10 @@ test_http_failed_function() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     ABADDON_HTTP_STATUS="error"
@@ -533,8 +605,10 @@ test_http_stats_function_exists() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     declare -F get_http_stats >/dev/null
@@ -544,21 +618,25 @@ test_http_stats_output() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Output the stats directly for run_test_with_output to check
     get_http_stats
 }
 
-# Test module validation
+# Test module security
 test_http_validate_function_exists() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     declare -F http_validate >/dev/null
@@ -568,11 +646,13 @@ test_http_validate_success() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
-    # Should pass validation if HTTP client is available
+    # Should pass security if HTTP client is available
     if command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1; then
         http_validate
     else
@@ -586,8 +666,10 @@ test_http_info_function_exists() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     declare -F http_info >/dev/null
@@ -597,8 +679,10 @@ test_http_info_output() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Output the info directly for run_test_with_output to check
@@ -610,8 +694,10 @@ test_http_configuration_defaults() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     [[ "${ABADDON_HTTP_USER_AGENT:-}" == "Abaddon-HTTP/1.0.0" ]] && \
@@ -629,8 +715,10 @@ test_http_environment_override() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     [[ "${ABADDON_HTTP_TIMEOUT:-}" == "60" ]] && \
@@ -642,8 +730,10 @@ test_http_request_tracking() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     local initial_requests="${ABADDON_HTTP_REQUESTS:-0}"
@@ -659,8 +749,10 @@ test_http_curl_args_construction() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Test that curl implementation function exists
@@ -672,8 +764,10 @@ test_http_wget_args_construction() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Test that wget implementation function exists
@@ -685,8 +779,10 @@ test_http_fetch_args_construction() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path http)"
     
     # Test that fetch implementation function exists
@@ -707,15 +803,15 @@ else
     skip_test "HTTP client detection" "no HTTP client available (curl, wget, or fetch)"
 fi
 
-run_test "HTTP URL validation accepts valid HTTPS URLs" test_http_url_validation_valid
-run_test "HTTP URL validation rejects invalid URLs" test_http_url_validation_invalid false
-run_test "HTTP URL validation rejects unsupported schemes" test_http_url_validation_invalid_scheme false
-run_test "HTTP URL validation accepts file:// URLs" test_http_url_validation_file_scheme
+run_test "HTTP URL security accepts valid HTTPS URLs" test_http_url_security_valid
+run_test "HTTP URL security rejects invalid URLs" test_http_url_security_invalid false
+run_test "HTTP URL security rejects unsupported schemes" test_http_url_security_invalid_scheme false
+run_test "HTTP URL security accepts file:// URLs" test_http_url_security_file_scheme
 
 if command -v curl >/dev/null 2>&1; then
-    run_test "HTTP URL validation accepts FTP URLs with curl" test_http_url_validation_ftp_scheme
+    run_test "HTTP URL security accepts FTP URLs with curl" test_http_url_security_ftp_scheme
 else
-    run_test "HTTP URL validation rejects FTP URLs without curl" test_http_url_validation_ftp_scheme false
+    run_test "HTTP URL security rejects FTP URLs without curl" test_http_url_security_ftp_scheme false
 fi
 
 run_test "HTTP request fails without method" test_http_request_missing_method false
@@ -749,9 +845,9 @@ run_test "HTTP stats function exists" test_http_stats_function_exists
 run_test_with_output "HTTP stats output includes statistics header" test_http_stats_output "HTTP Client Statistics" contains
 
 if command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1 || command -v fetch >/dev/null 2>&1; then
-    run_test "HTTP module validation passes" test_http_validate_success
+    run_test "HTTP module security passes" test_http_validate_success
 else
-    skip_test "HTTP module validation" "no HTTP client available"
+    skip_test "HTTP module security" "no HTTP client available"
 fi
 
 run_test "HTTP validate function exists" test_http_validate_function_exists

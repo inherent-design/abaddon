@@ -4,27 +4,33 @@
 # Test module loading and dependencies
 test_commands_requires_dependencies() {
     # Should fail without required modules loaded
-    source "$(get_module_path commands)"
+    source "$(get_module_path command)"
 }
 
 test_commands_loads_with_dependencies() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
-    [[ "${ABADDON_COMMANDS_LOADED:-}" == "1" ]]
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
+    [[ "${ABADDON_COMMAND_LOADED:-}" == "1" ]]
 }
 
 # Test registry initialization
 test_commands_init_requires_context() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Should fail without context
     commands_init >/dev/null 2>&1
@@ -32,25 +38,31 @@ test_commands_init_requires_context() {
 
 test_commands_init_with_context() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     commands_init "test-app" >/dev/null 2>&1
-    [[ "${ABADDON_COMMANDS_REGISTRY_INITIALIZED:-}" == "true" ]] && \
-    [[ "${ABADDON_COMMANDS_APPLICATION_CONTEXT:-}" == "test-app" ]]
+    [[ "${ABADDON_COMMAND_REGISTRY_INITIALIZED:-}" == "true" ]] && \
+    [[ "${ABADDON_COMMAND_APPLICATION_CONTEXT:-}" == "test-app" ]]
 }
 
 # Test command registration
 test_commands_register_requires_init() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Should fail without initialization
     register_command "test" "Test command" "test_handler" >/dev/null 2>&1
@@ -58,11 +70,14 @@ test_commands_register_requires_init() {
 
 test_commands_register_basic() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -72,17 +87,20 @@ test_commands_register_basic() {
     commands_init "test-app" >/dev/null 2>&1
     register_command "test" "Test command" "test_handler" >/dev/null 2>&1
     
-    [[ "${ABADDON_COMMANDS_STATUS:-}" == "registered" ]] && \
-    [[ "${ABADDON_COMMANDS_COMMAND:-}" == "test" ]]
+    [[ "${ABADDON_COMMAND_STATUS:-}" == "registered" ]] && \
+    [[ "${ABADDON_COMMAND_COMMAND:-}" == "test" ]]
 }
 
 test_commands_register_with_priority() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -92,16 +110,19 @@ test_commands_register_with_priority() {
     commands_init "test-app" >/dev/null 2>&1
     register_command "test" "Test command" "test_handler" 75 >/dev/null 2>&1
     
-    [[ "${ABADDON_COMMANDS_PRIORITIES[test]:-}" == "75" ]]
+    [[ "${ABADDON_COMMAND_PRIORITIES[test]:-}" == "75" ]]
 }
 
 test_commands_register_duplicate_fails() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -115,11 +136,14 @@ test_commands_register_duplicate_fails() {
 
 test_commands_register_invalid_priority() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -133,11 +157,14 @@ test_commands_register_invalid_priority() {
 # Test command aliases
 test_commands_register_alias() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -148,16 +175,19 @@ test_commands_register_alias() {
     register_command "test" "Test command" "test_handler" >/dev/null 2>&1
     register_command_alias "t" "test" >/dev/null 2>&1
     
-    [[ "${ABADDON_COMMANDS_ALIASES[t]:-}" == "test" ]]
+    [[ "${ABADDON_COMMAND_ALIASES[t]:-}" == "test" ]]
 }
 
 test_commands_register_alias_invalid_target() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     commands_init "test-app" >/dev/null 2>&1
     register_command_alias "t" "nonexistent" >/dev/null 2>&1
@@ -166,11 +196,14 @@ test_commands_register_alias_invalid_target() {
 # Test command execution
 test_commands_execute_basic() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -181,16 +214,19 @@ test_commands_execute_basic() {
     register_command "test" "Test command" "test_handler" >/dev/null 2>&1
     execute_command "test" >/dev/null 2>&1
     
-    [[ "${ABADDON_COMMANDS_STATUS:-}" == "success" ]]
+    [[ "${ABADDON_COMMAND_STATUS:-}" == "success" ]]
 }
 
 test_commands_execute_with_args() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler that checks arguments
     test_handler() {
@@ -201,16 +237,19 @@ test_commands_execute_with_args() {
     register_command "test" "Test command" "test_handler" >/dev/null 2>&1
     execute_command "test" "arg1" "arg2" >/dev/null 2>&1
     
-    [[ "${ABADDON_COMMANDS_STATUS:-}" == "success" ]]
+    [[ "${ABADDON_COMMAND_STATUS:-}" == "success" ]]
 }
 
 test_commands_execute_alias() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -222,16 +261,19 @@ test_commands_execute_alias() {
     register_command_alias "t" "test" >/dev/null 2>&1
     execute_command "t" >/dev/null 2>&1
     
-    [[ "${ABADDON_COMMANDS_STATUS:-}" == "success" ]]
+    [[ "${ABADDON_COMMAND_STATUS:-}" == "success" ]]
 }
 
 test_commands_execute_nonexistent() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     commands_init "test-app" >/dev/null 2>&1
     execute_command "nonexistent" >/dev/null 2>&1
@@ -239,11 +281,14 @@ test_commands_execute_nonexistent() {
 
 test_commands_execute_handler_failure() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define failing test handler
     failing_handler() {
@@ -258,11 +303,14 @@ test_commands_execute_handler_failure() {
 # Test command existence checks
 test_commands_exists_true() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -277,11 +325,14 @@ test_commands_exists_true() {
 
 test_commands_exists_false() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     commands_init "test-app" >/dev/null 2>&1
     
@@ -290,11 +341,14 @@ test_commands_exists_false() {
 
 test_commands_exists_alias() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -311,11 +365,14 @@ test_commands_exists_alias() {
 # Test command listing
 test_commands_list_basic() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handlers
     handler1() { return 0; }
@@ -332,11 +389,14 @@ test_commands_list_basic() {
 
 test_commands_list_without_init() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     list_commands >/dev/null 2>&1
 }
@@ -344,11 +404,14 @@ test_commands_list_without_init() {
 # Test command info
 test_commands_get_info() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -365,11 +428,14 @@ test_commands_get_info() {
 
 test_commands_get_info_priority() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Define test handler
     test_handler() {
@@ -386,11 +452,14 @@ test_commands_get_info_priority() {
 
 test_commands_get_info_nonexistent() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     commands_init "test-app" >/dev/null 2>&1
     get_command_info "nonexistent" >/dev/null 2>&1
@@ -399,35 +468,41 @@ test_commands_get_info_nonexistent() {
 # Test state management
 test_commands_reset_state() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Set some state first
-    ABADDON_COMMANDS_STATUS="test_status"
-    ABADDON_COMMANDS_ERROR="test_error"
-    ABADDON_COMMANDS_COMMAND="test_command"
+    ABADDON_COMMAND_STATUS="test_status"
+    ABADDON_COMMAND_ERROR="test_error"
+    ABADDON_COMMAND_COMMAND="test_command"
     
     reset_commands_state
     
-    [[ -z "${ABADDON_COMMANDS_STATUS:-}" ]] && \
-    [[ -z "${ABADDON_COMMANDS_ERROR:-}" ]] && \
-    [[ -z "${ABADDON_COMMANDS_COMMAND:-}" ]]
+    [[ -z "${ABADDON_COMMAND_STATUS:-}" ]] && \
+    [[ -z "${ABADDON_COMMAND_ERROR:-}" ]] && \
+    [[ -z "${ABADDON_COMMAND_COMMAND:-}" ]]
 }
 
 test_commands_state_accessors() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
     
-    ABADDON_COMMANDS_STATUS="success"
-    ABADDON_COMMANDS_ERROR="test_error"
-    ABADDON_COMMANDS_COMMAND="test_cmd"
+    source "$(get_module_path command)"
+    
+    ABADDON_COMMAND_STATUS="success"
+    ABADDON_COMMAND_ERROR="test_error"
+    ABADDON_COMMAND_COMMAND="test_cmd"
     
     [[ "$(get_commands_status)" == "success" ]] && \
     [[ "$(get_commands_error)" == "test_error" ]] && \
@@ -437,11 +512,14 @@ test_commands_state_accessors() {
 # Test statistics
 test_commands_get_stats() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     commands_init "test-app" >/dev/null 2>&1
     
@@ -451,11 +529,14 @@ test_commands_get_stats() {
 
 test_commands_stats_without_init() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     get_commands_stats >/dev/null 2>&1
 }
@@ -463,22 +544,28 @@ test_commands_stats_without_init() {
 # Test module validation
 test_commands_validate_module() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     commands_validate >/dev/null 2>&1
 }
 
 test_commands_info_output() {
     source "$(get_module_path core)"
+    source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path commands)"
+    source "$(get_module_path state-machine)"
+    
+    source "$(get_module_path command)"
     
     # Output the info directly for run_test_with_output to check
     commands_info

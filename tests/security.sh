@@ -1,67 +1,67 @@
-# Validation module tests
-# Test functions for abaddon-validation.sh - Pure validation logic utility module
+# Security module tests
+# Test functions for abaddon-security.sh - Security validation and path safety
 
 # Test module loading and dependencies
-test_validation_requires_core() {
+test_security_requires_core() {
     # Should fail without core loaded
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
 }
 
-test_validation_loads_with_dependencies() {
+test_security_loads_with_dependencies() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
-    [[ "${ABADDON_VALIDATION_LOADED:-}" == "1" ]]
+    source "$(get_module_path security)"
+    [[ "${ABADDON_SECURITY_LOADED:-}" == "1" ]]
 }
 
 # Test validation state management
-test_validation_state_reset() {
+test_security_state_reset() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Set some state first
-    ABADDON_VALIDATION_STATUS="error"
-    ABADDON_VALIDATION_ERROR_MESSAGE="test error"
-    ABADDON_VALIDATION_DETAILS="test details"
+    ABADDON_SECURITY_STATUS="error"
+    ABADDON_SECURITY_ERROR_MESSAGE="test error"
+    ABADDON_SECURITY_DETAILS="test details"
     
-    clear_validation_state
+    clear_security_state
     
-    [[ -z "${ABADDON_VALIDATION_STATUS:-}" ]] && \
-    [[ -z "${ABADDON_VALIDATION_ERROR_MESSAGE:-}" ]] && \
-    [[ -z "${ABADDON_VALIDATION_DETAILS:-}" ]]
+    [[ -z "${ABADDON_SECURITY_STATUS:-}" ]] && \
+    [[ -z "${ABADDON_SECURITY_ERROR_MESSAGE:-}" ]] && \
+    [[ -z "${ABADDON_SECURITY_DETAILS:-}" ]]
 }
 
-test_validation_set_error_state() {
+test_security_set_error_state() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
-    clear_validation_state
-    set_validation_error "test error message" "test details"
+    clear_security_state
+    set_security_error "test error message" "test details"
     
-    [[ "${ABADDON_VALIDATION_STATUS:-}" == "error" ]] && \
-    [[ "${ABADDON_VALIDATION_ERROR_MESSAGE:-}" == "test error message" ]] && \
-    [[ "${ABADDON_VALIDATION_DETAILS:-}" == "test details" ]]
+    [[ "${ABADDON_SECURITY_STATUS:-}" == "error" ]] && \
+    [[ "${ABADDON_SECURITY_ERROR_MESSAGE:-}" == "test error message" ]] && \
+    [[ "${ABADDON_SECURITY_DETAILS:-}" == "test details" ]]
 }
 
-test_validation_set_success_state() {
+test_security_set_success_state() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
-    clear_validation_state
-    set_validation_success "success details"
+    clear_security_state
+    set_security_success "success details"
     
-    [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
-    [[ "${ABADDON_VALIDATION_DETAILS:-}" == "success details" ]]
+    [[ "${ABADDON_SECURITY_STATUS:-}" == "success" ]] && \
+    [[ "${ABADDON_SECURITY_DETAILS:-}" == "success details" ]]
 }
 
 # Test path validation functions
 test_validate_file_path_relative_safe() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_file_path "config.json" false
 }
@@ -69,7 +69,7 @@ test_validate_file_path_relative_safe() {
 test_validate_file_path_absolute_when_allowed() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_file_path "/tmp/test.json" true
 }
@@ -77,7 +77,7 @@ test_validate_file_path_absolute_when_allowed() {
 test_validate_file_path_absolute_when_disallowed() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_file_path "/tmp/test.json" false
 }
@@ -85,7 +85,7 @@ test_validate_file_path_absolute_when_disallowed() {
 test_validate_file_path_traversal_attack() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_file_path "../../../etc/passwd" false
 }
@@ -93,7 +93,7 @@ test_validate_file_path_traversal_attack() {
 test_validate_file_path_null_byte_injection() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     ! validate_file_path "config.json\0" false
 }
@@ -101,7 +101,7 @@ test_validate_file_path_null_byte_injection() {
 test_validate_file_path_empty_path() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_file_path "" false
 }
@@ -110,7 +110,7 @@ test_validate_file_path_empty_path() {
 test_validate_file_exists_real_file() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Create a test file
     local test_file="/tmp/test_validation_$$"
@@ -128,7 +128,7 @@ test_validate_file_exists_real_file() {
 test_validate_file_exists_nonexistent_file() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_file_exists "/nonexistent/file/$$"
 }
@@ -136,7 +136,7 @@ test_validate_file_exists_nonexistent_file() {
 test_validate_file_exists_directory() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_file_exists "/tmp"  # Directory, not file
 }
@@ -145,7 +145,7 @@ test_validate_file_exists_directory() {
 test_validate_directory_path_existing() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_directory_path "/tmp" false
 }
@@ -153,7 +153,7 @@ test_validate_directory_path_existing() {
 test_validate_directory_path_create_missing() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local test_dir="/tmp/test_validation_dir_$$"
     
@@ -169,7 +169,7 @@ test_validate_directory_path_create_missing() {
 test_validate_directory_path_dont_create_missing() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_directory_path "/nonexistent/directory/$$" false
 }
@@ -178,51 +178,51 @@ test_validate_directory_path_dont_create_missing() {
 test_normalize_query_path_jq() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     normalize_query_path "jq" "project.name"
     
-    [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
+    [[ "${ABADDON_SECURITY_STATUS:-}" == "success" ]] && \
     [[ "$(get_normalized_path)" == ".project.name" ]]
 }
 
 test_normalize_query_path_yq() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     normalize_query_path "yq" "project.name"
     
-    [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
+    [[ "${ABADDON_SECURITY_STATUS:-}" == "success" ]] && \
     [[ "$(get_normalized_path)" == ".project.name" ]]
 }
 
 test_normalize_query_path_xq() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     normalize_query_path "xq" "project.name"
     
-    [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
+    [[ "${ABADDON_SECURITY_STATUS:-}" == "success" ]] && \
     [[ "$(get_normalized_path)" == "project.name" ]]
 }
 
 test_normalize_query_path_tq() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     normalize_query_path "tq" "project.name"
     
-    [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
+    [[ "${ABADDON_SECURITY_STATUS:-}" == "success" ]] && \
     [[ "$(get_normalized_path)" == "project.name" ]]
 }
 
 test_normalize_query_path_unknown_tool() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     normalize_query_path "unknown_tool" "project.name"
 }
@@ -230,22 +230,22 @@ test_normalize_query_path_unknown_tool() {
 test_normalize_query_path_complex_path() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     normalize_query_path "jq" "config.database.host"
     
-    [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
+    [[ "${ABADDON_SECURITY_STATUS:-}" == "success" ]] && \
     [[ "$(get_normalized_path)" == ".config.database.host" ]]
 }
 
 test_normalize_query_path_array_access() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     normalize_query_path "jq" "items[0].name"
     
-    [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
+    [[ "${ABADDON_SECURITY_STATUS:-}" == "success" ]] && \
     [[ "$(get_normalized_path)" == ".items[0].name" ]]
 }
 
@@ -253,18 +253,18 @@ test_normalize_query_path_array_access() {
 test_normalize_nested_objects() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     normalize_query_path "jq" "config.database.connection.host"
     
-    [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
+    [[ "${ABADDON_SECURITY_STATUS:-}" == "success" ]] && \
     [[ "$(get_normalized_path)" == ".config.database.connection.host" ]]
 }
 
 test_normalize_state_preservation() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Test that state is properly preserved across calls
     normalize_query_path "jq" "first.path"
@@ -280,18 +280,18 @@ test_normalize_state_preservation() {
 test_normalize_empty_path() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     normalize_query_path "jq" ""
     
-    [[ "${ABADDON_VALIDATION_STATUS:-}" == "error" ]]
+    [[ "${ABADDON_SECURITY_STATUS:-}" == "error" ]]
 }
 
 # Test data format validation
 test_validate_json_content_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local json_content='{"name": "test", "version": "1.0"}'
     
@@ -301,7 +301,7 @@ test_validate_json_content_valid() {
 test_validate_json_content_invalid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local invalid_json='{"name": "test", "version":}'
     
@@ -311,7 +311,7 @@ test_validate_json_content_invalid() {
 test_validate_yaml_content_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local yaml_content='name: test
 version: 1.0'
@@ -326,7 +326,7 @@ version: 1.0'
 test_validate_yaml_content_invalid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local invalid_yaml='name: test
   version: [invalid'
@@ -341,7 +341,7 @@ test_validate_yaml_content_invalid() {
 test_validate_xml_content_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local xml_content='<?xml version="1.0"?><root><name>test</name></root>'
     
@@ -355,7 +355,7 @@ test_validate_xml_content_valid() {
 test_validate_xml_content_invalid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local invalid_xml='<root><name>test'  # Truly malformed - unterminated tags
     
@@ -369,7 +369,7 @@ test_validate_xml_content_invalid() {
 test_validate_toml_content_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local toml_content='name = "test"
 version = "1.0"'
@@ -384,7 +384,7 @@ version = "1.0"'
 test_validate_toml_content_invalid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local invalid_toml='name = test
   version = ['  # Invalid TOML syntax
@@ -400,14 +400,14 @@ test_validate_toml_content_invalid() {
 test_validate_and_extract_json() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local json_content='{"project": {"name": "test-project"}}'
     
     if command -v jq >/dev/null 2>&1; then
         validate_and_extract "json" "$json_content" "project.name" "default"
         
-        [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
+        [[ "${ABADDON_SECURITY_STATUS:-}" == "success" ]] && \
         [[ "$(get_extracted_value)" == "test-project" ]]
     else
         return 0  # Skip if jq not available
@@ -417,14 +417,14 @@ test_validate_and_extract_json() {
 test_validate_and_extract_json_with_default() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local json_content='{"project": {}}'
     
     if command -v jq >/dev/null 2>&1; then
         validate_and_extract "json" "$json_content" "project.missing" "default_value"
         
-        [[ "${ABADDON_VALIDATION_STATUS:-}" == "success" ]] && \
+        [[ "${ABADDON_SECURITY_STATUS:-}" == "success" ]] && \
         [[ "$(get_extracted_value)" == "default_value" ]]
     else
         return 0  # Skip if jq not available
@@ -434,7 +434,7 @@ test_validate_and_extract_json_with_default() {
 test_validate_and_extract_invalid_format() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_and_extract "invalid_format" "content" "path" "default"
 }
@@ -443,7 +443,7 @@ test_validate_and_extract_invalid_format() {
 test_validate_field_required_exists() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local json_content='{"name": "test"}'
     
@@ -457,7 +457,7 @@ test_validate_field_required_exists() {
 test_validate_field_required_missing() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     local json_content='{}'
     
@@ -471,7 +471,7 @@ test_validate_field_required_missing() {
 test_validate_value_in_list_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_value_in_list "apple" "apple,banana,cherry"
 }
@@ -479,7 +479,7 @@ test_validate_value_in_list_valid() {
 test_validate_value_in_list_invalid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_value_in_list "grape" "apple,banana,cherry"
 }
@@ -487,7 +487,7 @@ test_validate_value_in_list_invalid() {
 test_validate_value_in_list_empty_value() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_value_in_list "" "apple,banana,cherry"
 }
@@ -495,7 +495,7 @@ test_validate_value_in_list_empty_value() {
 test_validate_numeric_range_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_numeric_range "50" "1" "100"
 }
@@ -503,7 +503,7 @@ test_validate_numeric_range_valid() {
 test_validate_numeric_range_too_low() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_numeric_range "0" "1" "100"
 }
@@ -511,7 +511,7 @@ test_validate_numeric_range_too_low() {
 test_validate_numeric_range_too_high() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_numeric_range "101" "1" "100"
 }
@@ -519,7 +519,7 @@ test_validate_numeric_range_too_high() {
 test_validate_numeric_range_non_numeric() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_numeric_range "abc" "1" "100"
 }
@@ -527,7 +527,7 @@ test_validate_numeric_range_non_numeric() {
 test_validate_numeric_range_at_boundaries() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_numeric_range "1" "1" "100" && \
     validate_numeric_range "100" "1" "100"
@@ -537,7 +537,7 @@ test_validate_numeric_range_at_boundaries() {
 test_validate_command_name_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_command_name "init"
 }
@@ -545,7 +545,7 @@ test_validate_command_name_valid() {
 test_validate_command_name_with_dash() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_command_name "create-project"
 }
@@ -553,7 +553,7 @@ test_validate_command_name_with_dash() {
 test_validate_command_name_invalid_characters() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_command_name "init@project"
 }
@@ -561,7 +561,7 @@ test_validate_command_name_invalid_characters() {
 test_validate_command_name_empty() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_command_name ""
 }
@@ -569,7 +569,7 @@ test_validate_command_name_empty() {
 test_validate_project_name_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_project_name "my-project"
 }
@@ -577,7 +577,7 @@ test_validate_project_name_valid() {
 test_validate_project_name_with_underscore() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_project_name "my_project"
 }
@@ -585,7 +585,7 @@ test_validate_project_name_with_underscore() {
 test_validate_project_name_invalid_start() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_project_name "-project"
 }
@@ -593,89 +593,89 @@ test_validate_project_name_invalid_start() {
 test_validate_project_name_special_characters() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     validate_project_name "my@project"
 }
 
 # Test state access functions
-test_get_validation_status() {
+test_get_security_status() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
-    set_validation_error "test error" "details"
+    set_security_error "test error" "details"
     local status
-    status=$(get_validation_status)
+    status=$(get_security_status)
     
     [[ "$status" == "error" ]]
 }
 
-test_get_validation_error() {
+test_get_security_error() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
-    set_validation_error "test error message" "details"
+    set_security_error "test error message" "details"
     local error
-    error=$(get_validation_error)
+    error=$(get_security_error)
     
     [[ "$error" == "test error message" ]]
 }
 
-test_get_validation_details() {
+test_get_security_details() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
-    set_validation_success "success details"
+    set_security_success "success details"
     local details
-    details=$(get_validation_details)
+    details=$(get_security_details)
     
     [[ "$details" == "success details" ]]
 }
 
-test_validation_succeeded_true() {
+test_security_succeeded_true() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
-    set_validation_success "details"
-    validation_succeeded
+    set_security_success "details"
+    security_succeeded
 }
 
-test_validation_succeeded_false() {
+test_security_succeeded_false() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
-    set_validation_error "error" "details"
-    validation_succeeded
+    set_security_error "error" "details"
+    security_succeeded
 }
 
-test_validation_failed_true() {
+test_security_failed_true() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
-    set_validation_error "error" "details"
-    validation_failed
+    set_security_error "error" "details"
+    security_failed
 }
 
-test_validation_failed_false() {
+test_security_failed_false() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
-    set_validation_success "details"
-    validation_failed
+    set_security_success "details"
+    security_failed
 }
 
 # Test schema validation (if ajv-cli available)
 test_validate_json_schema_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Skip if jsonschema CLI not available
     if ! command -v jsonschema >/dev/null 2>&1; then
@@ -709,7 +709,7 @@ EOF
 test_validate_json_schema_invalid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Skip if jsonschema CLI not available
     if ! command -v jsonschema >/dev/null 2>&1; then
@@ -740,12 +740,12 @@ EOF
 }
 
 # Register all validation tests
-run_test "Validation module requires core (dependency check)" test_validation_requires_core false
-run_test "Validation module loads with all dependencies" test_validation_loads_with_dependencies
+run_test "Validation module requires core (dependency check)" test_security_requires_core false
+run_test "Validation module loads with all dependencies" test_security_loads_with_dependencies
 
-run_test "Validation state reset clears all state" test_validation_state_reset
-run_test "Set validation error state works" test_validation_set_error_state
-run_test "Set validation success state works" test_validation_set_success_state
+run_test "Validation state reset clears all state" test_security_state_reset
+run_test "Set validation error state works" test_security_set_error_state
+run_test "Set validation success state works" test_security_set_success_state
 
 run_test "Validate file path: relative safe path" test_validate_file_path_relative_safe
 run_test "Validate file path: absolute when allowed" test_validate_file_path_absolute_when_allowed
@@ -830,14 +830,14 @@ run_test "Validate project name: with underscore" test_validate_project_name_wit
 run_test "Validate project name: invalid start" test_validate_project_name_invalid_start false
 run_test "Validate project name: special characters" test_validate_project_name_special_characters false
 
-run_test "Get validation status returns current status" test_get_validation_status
-run_test "Get validation error returns error message" test_get_validation_error
-run_test "Get validation details returns details" test_get_validation_details
+run_test "Get validation status returns current status" test_get_security_status
+run_test "Get validation error returns error message" test_get_security_error
+run_test "Get validation details returns details" test_get_security_details
 
-run_test "Validation succeeded returns true for success" test_validation_succeeded_true
-run_test "Validation succeeded returns false for error" test_validation_succeeded_false false
-run_test "Validation failed returns true for error" test_validation_failed_true
-run_test "Validation failed returns false for success" test_validation_failed_false false
+run_test "Validation succeeded returns true for success" test_security_succeeded_true
+run_test "Validation succeeded returns false for error" test_security_succeeded_false false
+run_test "Validation failed returns true for error" test_security_failed_true
+run_test "Validation failed returns false for success" test_security_failed_false false
 
 if command -v jsonschema >/dev/null 2>&1; then
     run_test "Validate JSON schema: valid data" test_validate_json_schema_valid

@@ -11,7 +11,7 @@ test_kv_loads_with_dependencies() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     [[ "${ABADDON_KV_LOADED:-}" == "1" ]]
 }
@@ -21,7 +21,7 @@ test_kv_state_reset() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Set some state first
@@ -42,7 +42,7 @@ test_kv_set_error_state() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     clear_kv_state
@@ -56,7 +56,7 @@ test_kv_set_success_state() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     clear_kv_state
@@ -71,7 +71,7 @@ test_kv_platform_tool_detection() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Test that Platform's tool detection is available
@@ -82,7 +82,7 @@ test_kv_get_tool_for_format_json() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     if command -v jq >/dev/null 2>&1; then
@@ -98,7 +98,7 @@ test_kv_get_tool_for_format_yaml() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     if command -v yq >/dev/null 2>&1; then
@@ -112,7 +112,7 @@ test_kv_get_tool_for_format_yaml() {
 
 test_kv_get_tool_for_format_invalid() {
     source "$(get_module_path core)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     get_tool_for_format "invalid_format" >/dev/null 2>&1
@@ -123,7 +123,7 @@ test_kv_detect_format_json() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Create test JSON file
@@ -144,7 +144,7 @@ test_kv_detect_format_yaml() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Create test YAML file
@@ -168,7 +168,7 @@ test_kv_detect_format_nonexistent() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     detect_file_format "/nonexistent/file/$$" >/dev/null 2>&1
@@ -179,7 +179,7 @@ test_kv_execute_cached_extraction_json() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -209,7 +209,7 @@ test_kv_execute_cached_extraction_with_default() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -240,7 +240,7 @@ test_kv_get_config_value_json() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -278,7 +278,7 @@ test_kv_get_config_value_yaml() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if yq not available
@@ -312,7 +312,7 @@ test_kv_get_config_value_missing_file() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     get_config_value "app.name" "/nonexistent/file/$$" "default" >/dev/null 2>&1
@@ -322,7 +322,7 @@ test_kv_get_config_value_missing_key() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -350,7 +350,7 @@ test_kv_key_exists_present() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -375,7 +375,7 @@ test_kv_key_exists_missing() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -402,7 +402,7 @@ test_kv_get_config_values_batch() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -434,7 +434,7 @@ test_kv_get_config_values_mixed_results() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -459,7 +459,7 @@ test_kv_validate_config_file_valid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Create valid JSON config file
@@ -479,7 +479,7 @@ test_kv_validate_config_file_invalid() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Create invalid JSON config file
@@ -500,7 +500,7 @@ test_kv_get_status() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     set_kv_success "test"
@@ -514,7 +514,7 @@ test_kv_get_value() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     set_kv_success "test_value"
@@ -528,7 +528,7 @@ test_kv_get_format() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     ABADDON_KV_FORMAT="json"
@@ -542,7 +542,7 @@ test_kv_get_tool() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     ABADDON_KV_TOOL="jq"
@@ -556,7 +556,7 @@ test_kv_succeeded() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     set_kv_success "test"
@@ -567,7 +567,7 @@ test_kv_failed() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     set_kv_error "test error"
@@ -578,7 +578,7 @@ test_kv_succeeded_false_on_error() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     set_kv_error "test error"
@@ -591,7 +591,7 @@ test_kv_failed_false_on_success() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     set_kv_success "test"
@@ -605,7 +605,7 @@ test_kv_get_stats() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Perform some operations to generate stats
@@ -630,7 +630,7 @@ test_kv_validate_module() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     kv_validate >/dev/null 2>&1
@@ -640,7 +640,7 @@ test_kv_info_output() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Output the info directly for run_test_with_output to check
@@ -652,7 +652,7 @@ test_kv_array_access() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -686,7 +686,7 @@ test_kv_nested_objects() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -725,7 +725,7 @@ test_kv_cache_behavior() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -758,7 +758,7 @@ test_kv_extract_string_json() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -777,7 +777,7 @@ test_kv_extract_string_missing_key() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if jq not available
@@ -796,7 +796,7 @@ test_kv_extract_string_invalid_format() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Test unsupported format
@@ -807,7 +807,7 @@ test_kv_extract_string_yaml() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     source "$(get_module_path kv)"
     
     # Skip if yq not available

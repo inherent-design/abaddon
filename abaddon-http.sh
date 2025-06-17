@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Abaddon HTTP - Generic HTTP client with response parsing integration
 # Version: 1.0.0
-# Purpose: HTTP client primitive integrating cache, validation, and KV parsing
+# Purpose: HTTP client primitive integrating cache, security, and KV parsing
 
 set -u  # Catch undefined variables (linting-like behavior)
 
@@ -25,13 +25,23 @@ readonly ABADDON_HTTP_LOADED=1
     return 1
 }
 
-[[ -n "${ABADDON_VALIDATION_LOADED:-}" ]] || {
-    echo "ERROR: abaddon-http.sh requires abaddon-validation.sh to be loaded first" >&2
+[[ -n "${ABADDON_SECURITY_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-http.sh requires abaddon-security.sh to be loaded first" >&2
+    return 1
+}
+
+[[ -n "${ABADDON_DATATYPES_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-http.sh requires abaddon-datatypes.sh to be loaded first" >&2
     return 1
 }
 
 [[ -n "${ABADDON_KV_LOADED:-}" ]] || {
     echo "ERROR: abaddon-http.sh requires abaddon-kv.sh to be loaded first" >&2
+    return 1
+}
+
+[[ -n "${ABADDON_STATE_MACHINE_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-http.sh requires abaddon-state-machine.sh to be loaded first" >&2
     return 1
 }
 
@@ -106,8 +116,8 @@ get_http_status() {
         echo "error"
     elif [[ -n "$ABADDON_HTTP_CLIENT" ]]; then
         echo "ready"
-    elif [[ -n "${ABADDON_CORE_LOADED:-}" && -n "${ABADDON_PLATFORM_LOADED:-}" && -n "${ABADDON_CACHE_LOADED:-}" && -n "${ABADDON_VALIDATION_LOADED:-}" && -n "${ABADDON_KV_LOADED:-}" ]]; then
-        echo "incomplete"
+    elif [[ -n "${ABADDON_CORE_LOADED:-}" && -n "${ABADDON_PLATFORM_LOADED:-}" && -n "${ABADDON_CACHE_LOADED:-}" && -n "${ABADDON_SECURITY_LOADED:-}" && -n "${ABADDON_DATATYPES_LOADED:-}" && -n "${ABADDON_KV_LOADED:-}" ]]; then
+        echo "ready"
     else
         echo "unknown"
     fi
@@ -164,7 +174,7 @@ validate_http_state() {
     # Check dependencies are loaded
     local required_deps=(
         "ABADDON_CORE_LOADED" "ABADDON_PLATFORM_LOADED" "ABADDON_CACHE_LOADED"
-        "ABADDON_VALIDATION_LOADED" "ABADDON_KV_LOADED"
+        "ABADDON_SECURITY_LOADED" "ABADDON_DATATYPES_LOADED" "ABADDON_KV_LOADED"
     )
     
     for dep in "${required_deps[@]}"; do
@@ -256,7 +266,7 @@ http_request() {
         return 1
     fi
     
-    # Validate URL
+    # Validate URL using local validation function
     if ! validate_url "$url"; then
         ABADDON_HTTP_STATUS="$ABADDON_HTTP_INVALID_URL"
         ABADDON_HTTP_ERROR_MESSAGE="Invalid URL format: $url"
@@ -769,7 +779,7 @@ http_info() {
     echo "Client: ${ABADDON_HTTP_CLIENT:-not detected}"
     echo "Functions: http_get, http_post, http_put, http_delete, http_parse_response"
     echo "State: ABADDON_HTTP_STATUS, ABADDON_HTTP_RESPONSE_BODY, ABADDON_HTTP_STATUS_CODE"
-    echo "Integration: cache.sh, validation.sh, kv.sh"
+    echo "Integration: cache.sh, security.sh, datatypes.sh, kv.sh"
 }
 
 log_debug "abaddon-http.sh loaded successfully"

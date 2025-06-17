@@ -38,17 +38,17 @@ declare -g ABADDON_TESTS_CURRENT_SUITE=""
 # Detect terminal capabilities (UNIX-style with --no-color support)
 detect_test_runner_capabilities() {
     ABADDON_TESTS_COLOR_DETECTION="disabled"
-    
+
     # Honor NO_COLOR environment variable (standard)
     if [[ -n "${NO_COLOR:-}" ]]; then
         return 0
     fi
-    
+
     # Honor --no-color flag if passed
     if [[ "$*" =~ --no-color ]]; then
         return 0
     fi
-    
+
     # Auto-detect: only enable colors for interactive terminals
     if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
         local term_colors
@@ -93,10 +93,10 @@ setup_test_framework() {
     # Initialize test runner capabilities (pass CLI args for --no-color detection)
     detect_test_runner_capabilities "$@"
     initialize_test_colors
-    
+
     # Set framework-level isolation mode
     ABADDON_TESTS_ISOLATION_MODE="subshell+cleanup+lifecycle"
-    
+
     # Integration test tracking removed (obsolete)
 }
 
@@ -120,11 +120,11 @@ setup_test_env() {
     if [[ -z "${ABADDON_TESTS_TEMP_DIR:-}" ]]; then
         ABADDON_TESTS_TEMP_DIR=$(mktemp -d -t "abaddon_test_XXXXXX")
         export ABADDON_TESTS_TEMP_DIR
-        
+
         # Register cleanup trap
         trap 'cleanup_test_framework_on_exit' EXIT
     fi
-    
+
     # Export essential test utilities and directories to subshell
     export ABADDON_TESTS_RUNNER_DIR
     export ABADDON_TESTS_DIR
@@ -143,7 +143,7 @@ cleanup_test_env() {
 # Framework cleanup on exit
 cleanup_test_framework_on_exit() {
     cleanup_test_env
-    
+
     # Integration test state cleanup removed (obsolete)
 }
 
@@ -154,10 +154,10 @@ cleanup_test_framework_on_exit() {
 # Discover and execute module-specific lifecycle hooks
 execute_module_lifecycle_hook() {
     local module_name="$1"
-    local hook_type="$2"  # setup, teardown, isolate, validate
-    
+    local hook_type="$2" # setup, teardown, isolate, validate
+
     local hook_function="${module_name}_test_${hook_type}"
-    
+
     # Check if hook function exists and execute it
     if declare -f "$hook_function" >/dev/null 2>&1; then
         if [[ "$ABADDON_TESTS_DEBUG_MODE" == "true" ]]; then
@@ -170,7 +170,7 @@ execute_module_lifecycle_hook() {
 # Clean up module-specific test state
 cleanup_module_test_state() {
     local module_name="$1"
-    
+
     # Clean ABADDON_TESTS_MODULE_* variables
     for var in $(compgen -v "ABADDON_TESTS_${module_name^^}_" 2>/dev/null || true); do
         unset "$var" 2>/dev/null || true
@@ -205,7 +205,7 @@ format_stderr_as_diagnostic() {
                 clean_line=$(echo "$line" | sed 's/\x1b\[[0-9;]*m//g')
                 echo -e "${ABADDON_TESTS_DIM}#   stderr: $clean_line${ABADDON_TESTS_NC}"
             fi
-        done <<< "$stderr_content"
+        done <<<"$stderr_content"
     fi
 }
 
@@ -255,20 +255,20 @@ run_test() {
     # Run test in isolated subshell with enhanced error handling
     local test_result
     local stderr_output
-    
+
     # Capture stderr separately to potentially recolor expected failures
     if stderr_output=$(
         (
             # Enhanced test isolation
             setup_test_env
-            
+
             # Execute test function
             "$test_function"
         ) 2>&1 >/dev/null
     ) && (
         # Enhanced test isolation
         setup_test_env
-        
+
         # Execute test function (for actual return code)
         "$test_function" >/dev/null 2>&1
     ); then
@@ -276,7 +276,7 @@ run_test() {
     else
         test_result="failure"
     fi
-    
+
     # Output stderr as TAP diagnostics for cleaner parsing
     if [[ -n "$stderr_output" ]]; then
         # All stderr output gets formatted as diagnostics for TAP compliance
@@ -301,7 +301,7 @@ run_test_with_output() {
     local test_name="$1"
     local test_function="$2"
     local expected_output="$3"
-    local match_type="${4:-exact}"  # exact, contains, regex
+    local match_type="${4:-exact}" # exact, contains, regex
 
     ABADDON_TESTS_TOTAL_COUNT=$((ABADDON_TESTS_TOTAL_COUNT + 1))
 
@@ -384,10 +384,10 @@ run_suite() {
             # Source test file in controlled environment
             # shellcheck source=/dev/null
             source "$test_file"
-            
+
             # Call registration function if it exists
             local register_function="register_${suite_name}_tests"
-            register_function="${register_function//-/_}"  # Convert hyphens to underscores
+            register_function="${register_function//-/_}" # Convert hyphens to underscores
             if declare -f "$register_function" >/dev/null 2>&1; then
                 log_diagnostic "Registering tests via: $register_function"
                 "$register_function"
@@ -399,7 +399,7 @@ run_suite() {
 
     # Execute suite teardown hook
     execute_module_lifecycle_hook "$suite_name" "teardown"
-    
+
     # Clean up module-specific test state
     cleanup_module_test_state "$suite_name"
 }
@@ -413,11 +413,11 @@ print_summary() {
     echo -e "${ABADDON_TESTS_BOLD}# Test Summary${ABADDON_TESTS_NC}"
     echo -e "${ABADDON_TESTS_LIGHT_BLUE}# Total: $ABADDON_TESTS_TOTAL_COUNT${ABADDON_TESTS_NC}"
     echo -e "${ABADDON_TESTS_GREEN}# Passed: $ABADDON_TESTS_PASS_COUNT${ABADDON_TESTS_NC}"
-    
+
     if [[ $ABADDON_TESTS_FAIL_COUNT -gt 0 ]]; then
         echo -e "${ABADDON_TESTS_RED}# Failed: $ABADDON_TESTS_FAIL_COUNT${ABADDON_TESTS_NC}"
     fi
-    
+
     if [[ $ABADDON_TESTS_SKIP_COUNT -gt 0 ]]; then
         echo -e "${ABADDON_TESTS_YELLOW}# Skipped: $ABADDON_TESTS_SKIP_COUNT${ABADDON_TESTS_NC}"
     fi
@@ -427,17 +427,17 @@ print_summary() {
     if [[ $ABADDON_TESTS_TOTAL_COUNT -gt 0 ]]; then
         success_rate=$((ABADDON_TESTS_PASS_COUNT * 100 / ABADDON_TESTS_TOTAL_COUNT))
     fi
-    
+
     # Dynamic color based on success rate
     local rate_color
     if [[ $success_rate -ge 95 ]]; then
-        rate_color="$ABADDON_TESTS_GREEN"    # 95-100%: green
+        rate_color="$ABADDON_TESTS_GREEN" # 95-100%: green
     elif [[ $success_rate -ge 80 ]]; then
-        rate_color="$ABADDON_TESTS_YELLOW"   # 80-94%: yellow  
+        rate_color="$ABADDON_TESTS_YELLOW" # 80-94%: yellow
     else
-        rate_color="$ABADDON_TESTS_RED"      # 0-79%: red
+        rate_color="$ABADDON_TESTS_RED" # 0-79%: red
     fi
-    
+
     echo -e "${rate_color}# Success Rate: ${success_rate}%${ABADDON_TESTS_NC}"
 
     # Exit with failure if any tests failed (TAP compliance)
@@ -460,23 +460,24 @@ get_module_path() {
 # Enhanced Multi-Argument Test Selection System
 # ============================================================================
 
-# Canonical test execution order (also serves as valid module list)
-# P1 Foundation → P2 Performance & Security → P3 Data & Communication → P4 Application
-declare -a ABADDON_TEST_ORDER=(
-    "core" "tty" "platform" "p1-integration"           # P1 Foundation
-    "cache" "validation" "kv" "p2-integration"         # P2 Performance & Security  
-    "i18n" "http" "p3-integration"                     # P3 Data & Communication
-    "commands"                                         # P4 Application Primitives
-)
-
 # Test suite definitions (composable groups)
 declare -A ABADDON_TEST_SUITES
-ABADDON_TEST_SUITES[p1]="core tty platform p1-integration"
-ABADDON_TEST_SUITES[p2]="cache validation kv p2-integration" 
-ABADDON_TEST_SUITES[p3]="i18n http p3-integration"
-ABADDON_TEST_SUITES[p4]="commands"
-ABADDON_TEST_SUITES[all]="core tty platform p1-integration cache validation kv p2-integration i18n http p3-integration commands"
-ABADDON_TEST_SUITES[integration]="p1-integration p2-integration p3-integration"
+declare -a ABADDON_TEST_ORDER=()
+declare -a main_test_suites=("p1" "p2" "p3" "p4")
+ABADDON_TEST_SUITES[p1]="core tty platform tool-detection p1-integration"
+ABADDON_TEST_SUITES[p2]="cache security datatypes kv object p2-integration"
+ABADDON_TEST_SUITES[p3]="state-machine command workflow p3-integration"
+ABADDON_TEST_SUITES[p4]="i18n http help p4-integration"
+
+# Canonical test execution order (also serves as valid module list)
+# P1 Foundation → P2 Data Management → P3 Stateful Orchestration → P4 Application Services
+for suite in "${main_test_suites[@]}"; do
+    read -r -a tests <<<"${ABADDON_TEST_SUITES[$suite]}"
+    ABADDON_TEST_ORDER+=("${tests[@]}")
+done
+
+ABADDON_TEST_SUITES[integration]="p1-integration p2-integration p3-integration p4-integration"
+ABADDON_TEST_SUITES[all]="${ABADDON_TEST_ORDER[*]}"
 
 # Validate if a test module is recognized
 is_valid_module() {
@@ -494,7 +495,7 @@ is_valid_module() {
 add_to_set() {
     local -n set_ref=$1
     local test_spec="$2"
-    
+
     if [[ -n "${ABADDON_TEST_SUITES[$test_spec]:-}" ]]; then
         # Expand suite to individual tests
         local test
@@ -506,7 +507,7 @@ add_to_set() {
         set_ref[$test_spec]=1
     else
         echo "ERROR: Unknown test suite or module: $test_spec" >&2
-        echo "Available suites: ${!ABADDON_TEST_SUITES[*]}" >&2  
+        echo "Available suites: ${!ABADDON_TEST_SUITES[*]}" >&2
         echo "Available modules: ${ABADDON_TEST_ORDER[*]}" >&2
         return 1
     fi
@@ -516,7 +517,7 @@ add_to_set() {
 remove_from_set() {
     local -n set_ref=$1
     local test_spec="$2"
-    
+
     if [[ -n "${ABADDON_TEST_SUITES[$test_spec]:-}" ]]; then
         # Remove suite tests
         local test
@@ -538,11 +539,11 @@ remove_from_set() {
 convert_set_to_ordered_array() {
     local result_array_name="$1"
     local set_array_name="$2"
-    
+
     # Clear the result array
     eval "${result_array_name}=()"
     local test
-    
+
     # Iterate through canonical order, include if selected
     for test in "${ABADDON_TEST_ORDER[@]}"; do
         # Check if test is in the set
@@ -556,15 +557,15 @@ convert_set_to_ordered_array() {
 parse_test_arguments() {
     local result_array_name="$1"
     shift
-    
+
     local -A selected_set
     local current_arg
     local has_args=false
-    
+
     # Process arguments with shift pattern
     while [[ $# -gt 0 ]]; do
         current_arg="$1"
-        
+
         case "$current_arg" in
         --no-color)
             # Skip color flag, don't mark as having test args
@@ -587,12 +588,12 @@ parse_test_arguments() {
         esac
         shift
     done
-    
+
     # Default to 'all' if no test arguments provided
     if [[ "$has_args" == "false" ]]; then
         add_to_set selected_set "all"
     fi
-    
+
     # Convert set to ordered array
     convert_set_to_ordered_array "$result_array_name" "selected_set"
 }
@@ -602,13 +603,13 @@ convert_tests_to_files() {
     local -n files_ref=$1
     local tests_array_name="$2"
     local tests_dir="$ABADDON_TESTS_DIR"
-    
+
     files_ref=()
     local test
-    
+
     # Use eval to access the array by name
     eval "local tests_array=(\"\${${tests_array_name}[@]}\")"
-    
+
     for test in "${tests_array[@]}"; do
         local test_file="$tests_dir/${test}.sh"
         if [[ -f "$test_file" ]]; then
@@ -622,16 +623,16 @@ convert_tests_to_files() {
 # Enhanced test discovery with multi-argument support and stable ordering
 discover_and_run_tests() {
     local tests_dir="$ABADDON_TESTS_DIR"
-    
+
     # Initialize test framework (pass all args for --no-color detection)
     setup_test_framework "$@"
-    
+
     # Parse CLI arguments for test selection
     local selected_tests=()
     if ! parse_test_arguments "selected_tests" "$@"; then
         return 1
     fi
-    
+
     # Print TAP header with enhanced information
     echo "$ABADDON_TESTS_TAP_VERSION"
     echo "# Abaddon Test Runner v${ABADDON_TESTS_VERSION}"
@@ -676,7 +677,7 @@ discover_and_run_tests() {
 main() {
     # Check for help request first
     case "${1:-}" in
-    help|--help|-h)
+    help | --help | -h)
         cat <<'EOF'
 Abaddon Test Runner v2.0.0 - Enhanced Multi-Argument Test Selection
 
@@ -690,26 +691,28 @@ Multi-Argument Support:
   - Unknown test names cause immediate error
 
 Test Suites:
-  all          - Run complete test suite (P1+P2+P3+P4)
-  p1           - Run P1 Foundation (core, tty, platform, p1-integration)
-  p2           - Run P2 Performance & Security (cache, validation, kv, integration)
-  p3           - Run P3 Data & Communication (i18n, http, integration)
-  p4           - Run P4 Application Primitives (commands)
-  integration  - Run all integration tests
+  all            - Run complete test suite (P1+P2+P3+P4)
+  integration    - Run all integration tests
+  p1             - Run P1 Foundation (core, tty, platform, tool-detection p1-integration)
+  p2             - Run P2 Performance & Security (cache, security, datatypes, kv, object, p2-integration)
+  p3             - Run P3 Stateful Orchestration (state-machine, command, workflow, p3-integration)
+  p4             - Run P4 Application Services (i18n, http, help, p4-integration)
 
 Individual Modules:
-  core         - Core module tests (logging, platform detection, utilities)
-  tty          - TTY module tests (color, terminal capabilities, cell membrane)
-  platform     - Platform module tests (tool detection, capabilities)
-  cache        - Cache module tests (P2 performance optimization)
-  validation   - Validation module tests (P2 security, input validation)
-  kv           - Key-value module tests (P2 data access layer)
-  i18n         - Internationalization module tests (P3 communication)
-  http         - HTTP module tests (P3 communication layer)
-  commands     - Commands module tests (P4 command registry)
+  core           - Core module tests (logging, platform detection, utilities)
+  tty            - TTY module tests (color, terminal capabilities, cell membrane)
+  platform       - Platform module tests (tool detection, capabilities)
+  cache          - Cache module tests (P2 performance optimization)
+  security       -
+  datatypes      -
+  kv             - Key-value module tests (P2 data access layer)
+  object         -
+  command        - Command module tests (P3 orchestration primitives)
+  i18n           - Internationalization module tests (P4 application services)
+  http           - HTTP module tests (P4 application services)
   p1-integration - P1 Foundation integration workflows
   p2-integration - P2 Performance & Security coordination workflows
-  p3-integration - P3 Data & Communication integration workflows
+  p3-integration - P3 Stateful Orchestration integration tests
 
 Features:
   - TAP version 13 compatible output
@@ -725,7 +728,7 @@ Options:
 Environment Variables:
   ABADDON_TESTS_DEBUG_MODE=true    - Enable debug output
   NO_COLOR=1                       - Disable color output (standard)
-  
+
 Examples:
   ./abaddon-tests.sh               # Run all tests (default)
   ./abaddon-tests.sh p2 i18n       # Run P2 suite + i18n module

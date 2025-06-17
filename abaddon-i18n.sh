@@ -9,14 +9,39 @@ set -u  # Catch undefined variables (linting-like behavior)
 [[ -n "${ABADDON_I18N_LOADED:-}" ]] && return 0
 readonly ABADDON_I18N_LOADED=1
 
-# Dependency checks
+# Dependency checks - P4 Application Service
 [[ -n "${ABADDON_CORE_LOADED:-}" ]] || {
     echo "ERROR: abaddon-i18n.sh requires abaddon-core.sh to be loaded first" >&2
     return 1
 }
 
+[[ -n "${ABADDON_PLATFORM_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-i18n.sh requires abaddon-platform.sh to be loaded first" >&2
+    return 1
+}
+
+[[ -n "${ABADDON_CACHE_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-i18n.sh requires abaddon-cache.sh to be loaded first" >&2
+    return 1
+}
+
+[[ -n "${ABADDON_SECURITY_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-i18n.sh requires abaddon-security.sh to be loaded first" >&2
+    return 1
+}
+
+[[ -n "${ABADDON_DATATYPES_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-i18n.sh requires abaddon-datatypes.sh to be loaded first" >&2
+    return 1
+}
+
 [[ -n "${ABADDON_KV_LOADED:-}" ]] || {
     echo "ERROR: abaddon-i18n.sh requires abaddon-kv.sh to be loaded first" >&2
+    return 1
+}
+
+[[ -n "${ABADDON_STATE_MACHINE_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-i18n.sh requires abaddon-state-machine.sh to be loaded first" >&2
     return 1
 }
 
@@ -78,8 +103,8 @@ get_i18n_status() {
         echo "error"
     elif [[ "$ABADDON_I18N_INITIALIZED" == "true" ]]; then
         echo "ready"
-    elif [[ -n "${ABADDON_CORE_LOADED:-}" && -n "${ABADDON_KV_LOADED:-}" ]]; then
-        echo "incomplete"
+    elif [[ -n "${ABADDON_CORE_LOADED:-}" && -n "${ABADDON_CACHE_LOADED:-}" && -n "${ABADDON_SECURITY_LOADED:-}" && -n "${ABADDON_DATATYPES_LOADED:-}" && -n "${ABADDON_KV_LOADED:-}" ]]; then
+        echo "ready"
     else
         echo "unknown"
     fi
@@ -130,7 +155,8 @@ validate_i18n_state() {
     
     # Check dependencies are loaded
     local required_deps=(
-        "ABADDON_CORE_LOADED" "ABADDON_KV_LOADED"
+        "ABADDON_CORE_LOADED" "ABADDON_CACHE_LOADED" "ABADDON_SECURITY_LOADED" 
+        "ABADDON_DATATYPES_LOADED" "ABADDON_KV_LOADED"
     )
     
     for dep in "${required_deps[@]}"; do
@@ -530,6 +556,21 @@ i18n_validate() {
         ((errors++))
     fi
     
+    if [[ -z "${ABADDON_CACHE_LOADED:-}" ]]; then
+        log_error "Cache dependency not loaded"
+        ((errors++))
+    fi
+    
+    if [[ -z "${ABADDON_SECURITY_LOADED:-}" ]]; then
+        log_error "Security dependency not loaded"
+        ((errors++))
+    fi
+    
+    if [[ -z "${ABADDON_DATATYPES_LOADED:-}" ]]; then
+        log_error "Datatypes dependency not loaded"
+        ((errors++))
+    fi
+    
     if [[ -z "${ABADDON_KV_LOADED:-}" ]]; then
         log_error "KV dependency not loaded"
         ((errors++))
@@ -547,7 +588,7 @@ validate_i18n() {
 i18n_info() {
     echo "Abaddon i18n - Extensible translation registry with variable substitution"
     echo "Version: 2.0.0"
-    echo "Dependencies: core.sh, kv.sh"
+    echo "Dependencies: core.sh, cache.sh, security.sh, datatypes.sh, kv.sh"
     echo "Features: Multi-domain translation, locale detection, variable substitution, runtime extension"
     echo "Main Functions:"
     echo "  i18n_init(--app-domain=name --app-translations=dir)"

@@ -1,453 +1,265 @@
-# P3 Integration Tests - Data & Communication Services  
-# Test functions for P3 services integration and P2→P3 coordination
+# P3 Integration Tests - Stateful Orchestration & Boundary Management
+# Test functions for P3 state machine orchestration and P2→P3 coordination
 
-# P3 Integration Test: i18n + KV coordination
-test_p3_i18n_kv_coordination() {
+# P3 Integration Test: State machine + P2 data coordination
+test_p3_state_machine_p2_coordination() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
+    source "$(get_module_path state-machine)"
+    source "$(get_module_path command)"
     
-    # Skip if jq not available
-    if ! command -v jq >/dev/null 2>&1; then
-        return 0
-    fi
+    # Test state machine using P2 components for validation and data
     
-    # Create test translation file
-    local test_translations="/tmp/test_p3_translations_$$"
-    mkdir -p "$test_translations"
+    # Initialize state machine
+    state_machine_init "uninitialized"
     
-    cat > "$test_translations/en.json" << 'EOF'
-{
-  "app": {
-    "name": "Test Application",
-    "welcome": "Welcome to {0}",
-    "config": {
-      "loaded": "Configuration loaded from {0}"
-    }
-  }
-}
-EOF
-    
-    # Initialize i18n with test domain
-    i18n_init --app-domain="testapp" --app-translations="$test_translations"
-    
-    # Create test config file
+    # Use security module for file validation
     local test_config="/tmp/test_p3_config_$$"
-    echo '{"app_name": "P3 Integration Test"}' > "$test_config"
+    echo '{"app_state": "ready"}' > "$test_config"
     
-    # Workflow: KV extraction → i18n translation with substitution
-    get_config_value "app_name" "$test_config" "Unknown App"
-    local app_name="$(get_kv_value)"
-    
-    # Use extracted value in i18n translation
-    t "app.welcome" "$app_name"
-    local welcome_message="$(get_i18n_value)"
-    
-    # Cleanup
-    rm -rf "$test_translations" "$test_config"
-    
-    [[ "$welcome_message" == "Welcome to P3 Integration Test" ]]
-}
-
-# P3 Integration Test: P2→P3 data flow
-test_p3_p2_data_flow() {
-    source "$(get_module_path core)"
-    source "$(get_module_path platform)"
-    source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
-    source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    
-    # Skip if jq not available
-    if ! command -v jq >/dev/null 2>&1; then
-        return 0
-    fi
-    
-    # Test complete P2→P3 workflow
-    
-    # 1. P2: Extract configuration using cache + validation + kv
-    local test_config="/tmp/test_p2_p3_flow_$$"
-    cat > "$test_config" << 'EOF'
-{
-  "application": {
-    "locale": "en", 
-    "features": {
-      "i18n_enabled": true,
-      "default_message": "Hello World"
-    }
-  }
-}
-EOF
-    
-    # Extract config values using P2 layer
-    get_config_value "application.locale" "$test_config" "en"
-    local locale="$(get_kv_value)"
-    
-    get_config_value "application.features.default_message" "$test_config" "Default"
-    local default_msg="$(get_kv_value)"
-    
-    # 2. P3: Use extracted values for i18n initialization
-    local test_translations="/tmp/test_p2_p3_translations_$$"
-    mkdir -p "$test_translations"
-    
-    cat > "$test_translations/en.json" << 'EOF'
-{
-  "messages": {
-    "greeting": "Hello from P3 layer",
-    "config_value": "Config says: {0}"
-  }
-}
-EOF
-    
-    i18n_init --app-domain="p2p3test" --app-translations="$test_translations"
-    
-    # Use P2-extracted data in P3 translations
-    t "messages.config_value" "$default_msg"
-    local final_message="$(get_i18n_value)"
-    
-    # Cleanup
-    rm -rf "$test_config" "$test_translations"
-    
-    [[ "$locale" == "en" ]] && \
-    [[ "$final_message" == "Config says: Hello World" ]]
-}
-
-# P3 Integration Test: Cross-layer state management
-test_p3_cross_layer_state() {
-    source "$(get_module_path core)"
-    source "$(get_module_path platform)"
-    source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
-    source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    
-    # Test that P3 maintains independent state from P2
-    
-    # Set states in P2 modules
-    set_validation_success "P2 validation OK"
-    local initial_validation_status="$(get_validation_status)"
-    
-    # Initialize P3 i18n
-    local test_translations="/tmp/test_p3_state_$$"
-    mkdir -p "$test_translations"
-    echo '{"test": {"key": "P3 value"}}' > "$test_translations/en.json"
-    
-    i18n_init --app-domain="statetest" --app-translations="$test_translations"
-    t "test.key"
-    
-    # Verify state independence and i18n functionality
-    local final_validation_status="$(get_validation_status)"
-    local kv_status="$(get_kv_status)"  # KV will show success from i18n translation
-    local i18n_status="$(get_i18n_lookup_status)"
-    local i18n_value="$(get_i18n_value)"
-    
-    # Cleanup
-    rm -rf "$test_translations"
-    
-    # Test that validation state persisted and i18n works correctly
-    [[ "$initial_validation_status" == "success" ]] && \
-    [[ "$final_validation_status" == "success" ]] && \
-    [[ "$kv_status" == "success" ]] && \
-    [[ "$i18n_status" == "success" ]] && \
-    [[ "$i18n_value" == "P3 value" ]]
-}
-
-# P3 Integration Test: P1→P2→P3 complete stack
-test_p3_complete_stack_integration() {
-    source "$(get_module_path core)"
-    source "$(get_module_path platform)"
-    source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
-    source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    
-    # Skip if jq not available
-    if ! command -v jq >/dev/null 2>&1; then
-        return 0
-    fi
-    
-    # Test complete P1→P2→P3 integration workflow
-    
-    # P1: Platform detection and tool availability
-    local json_tool="$(get_best_tool "json_processing")"
-    [[ "$json_tool" != "none" ]] || return 0  # Skip if no JSON tool
-    
-    # P2: Configuration management with validation and caching
-    local test_config="/tmp/test_complete_stack_$$"
-    cat > "$test_config" << 'EOF'
-{
-  "app": {
-    "name": "Complete Stack Test",
-    "locale": "en",
-    "messages": {
-      "startup": "Application {0} starting in {1} mode"
-    }
-  }
-}
-EOF
-    
-    # Validate configuration file
     validate_file_exists "$test_config"
-    [[ "$(get_validation_status)" == "success" ]] || return 1
+    local security_status="$(get_security_status)"
     
-    # Extract values using KV (with caching)
-    get_config_value "app.name" "$test_config" "Unknown"
-    local app_name="$(get_kv_value)"
-    
-    get_config_value "app.locale" "$test_config" "en"
-    local locale="$(get_kv_value)"
-    
-    # P3: i18n with extracted configuration
-    local test_translations="/tmp/test_complete_stack_translations_$$"
-    mkdir -p "$test_translations"
-    
-    cat > "$test_translations/$locale.json" << 'EOF'
-{
-  "system": {
-    "startup": "Starting {0} in {1} locale",
-    "ready": "System ready"
-  }
-}
-EOF
-    
-    i18n_init --app-domain="stacktest" --app-translations="$test_translations"
-    
-    # Use P1+P2 data in P3 translation
-    t "system.startup" "$app_name" "$locale"
-    local startup_message="$(get_i18n_value)"
-    
-    # Verify cache was used
-    get_cache_stats | grep -q "Cache Statistics" || return 1
-    
-    # Cleanup
-    rm -rf "$test_config" "$test_translations"
-    
-    [[ "$startup_message" == "Starting Complete Stack Test in en locale" ]]
-}
-
-# P3 Integration Test: Error propagation through layers
-test_p3_error_propagation() {
-    source "$(get_module_path core)"
-    source "$(get_module_path platform)"
-    source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
-    source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    
-    # Test that errors propagate correctly through P1→P2→P3
-    
-    # P2: Try to extract from invalid file
-    get_config_value "any.key" "/nonexistent/file/$$" "default"
-    local kv_status="$(get_kv_status)"
-    
-    # P3: Try to use i18n without initialization
-    t "some.key"
-    local i18n_status="$(get_i18n_lookup_status)"
-    
-    # Both should show error states
-    [[ "$kv_status" == "error" ]] && [[ "$i18n_status" == "error" ]]
-}
-
-# P3 Integration Test: HTTP + KV coordination (API response parsing)
-test_p3_http_kv_coordination() {
-    source "$(get_module_path core)"
-    source "$(get_module_path platform)"
-    source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
-    source "$(get_module_path kv)"
-    source "$(get_module_path http)"
-    
-    # Skip if no HTTP client available
-    if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
-        return 0
-    fi
-    
-    # Test HTTP → KV parsing workflow
-    http_get "https://httpbin.org/json"
-    
-    if http_succeeded; then
-        # Parse JSON response using KV system
-        http_parse_response "json" "slideshow.title"
-        local title="$(get_kv_value)"
-        
-        # Verify HTTP and KV coordination
-        [[ "$(get_http_request_status)" == "success" ]] && \
-        [[ "$(get_kv_status)" == "success" ]] && \
-        [[ "$title" == "Sample Slide Show" ]]
-    else
-        # Allow test to pass if HTTP fails (network issues)
-        return 0
-    fi
-}
-
-# P3 Integration Test: HTTP + i18n coordination (localized API responses)
-test_p3_http_i18n_coordination() {
-    source "$(get_module_path core)"
-    source "$(get_module_path platform)"
-    source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
-    source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path http)"
-    
-    # Skip if no HTTP client available
-    if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
-        return 0
-    fi
-    
-    # Create test translations for HTTP status messages
-    local test_translations="/tmp/test_p3_http_i18n_$$"
-    mkdir -p "$test_translations"
-    
-    cat > "$test_translations/en.json" << 'EOF'
-{
-  "http": {
-    "status": {
-      "200": "Request successful",
-      "404": "Resource not found"
-    }
-  }
-}
-EOF
-    
-    i18n_init --app-domain="httptest" --app-translations="$test_translations"
-    
-    # Make HTTP request and localize response
-    http_get "https://httpbin.org/status/200"
-    
-    if http_succeeded; then
-        local status_code="$(get_http_status_code)"
-        
-        # Use i18n to localize HTTP status (don't parse response body for status endpoints)
-        if [[ -n "$status_code" ]]; then
-            t "http.status[\"$status_code\"]"
-            local localized_status="$(get_i18n_value)"
-            
-            # Cleanup
-            rm -rf "$test_translations"
-            
-            [[ "$status_code" == "200" ]] && \
-            [[ "$localized_status" == "Request successful" ]]
-        else
-            # Cleanup and allow test to pass if status code not available
-            rm -rf "$test_translations"
-            return 0
-        fi
-    else
-        # Cleanup and allow test to pass if HTTP fails
-        rm -rf "$test_translations"
-        return 0
-    fi
-}
-
-# P3 Integration Test: Complete P3 data flow (HTTP → KV → i18n)
-test_p3_complete_data_flow() {
-    source "$(get_module_path core)"
-    source "$(get_module_path platform)"
-    source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
-    source "$(get_module_path kv)"
-    source "$(get_module_path i18n)"
-    source "$(get_module_path http)"
-    
-    # Skip if no HTTP client available
-    if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
-        return 0
-    fi
-    
-    # Create translations for API response localization
-    local test_translations="/tmp/test_p3_complete_flow_$$"
-    mkdir -p "$test_translations"
-    
-    cat > "$test_translations/en.json" << 'EOF'
-{
-  "http": {
-    "user_agent": "Client identified as: {0}"
-  }
-}
-EOF
-    
-    i18n_init --app-domain="completetest" --app-translations="$test_translations"
-    
-    # Complete workflow: HTTP → KV parsing → i18n localization
-    http_get "https://httpbin.org/user-agent"
-    
-    if http_succeeded; then
-        # Parse user agent from HTTP response
-        http_parse_response "json" "[\"user-agent\"]"
-        local user_agent="$(get_kv_value)"
-        
-        # Localize the extracted value
-        t "http.user_agent" "$user_agent"
-        local localized_message="$(get_i18n_value)"
+    # Use state machine to manage initialization flow
+    if [[ "$security_status" == "success" ]]; then
+        transition_to_state "initialized"
+        local current_state="$(get_current_state)"
         
         # Cleanup
-        rm -rf "$test_translations"
+        rm -f "$test_config"
         
-        # Verify complete P3 data flow
-        [[ "$(get_http_request_status)" == "success" ]] && \
-        [[ "$(get_kv_status)" == "success" ]] && \
-        [[ "$(get_i18n_lookup_status)" == "success" ]] && \
-        [[ "$user_agent" == "Abaddon-HTTP/1.0.0" ]] && \
-        [[ "$localized_message" == "Client identified as: Abaddon-HTTP/1.0.0" ]]
+        [[ "$current_state" == "initialized" ]]
     else
-        # Cleanup and allow test to pass if HTTP fails
-        rm -rf "$test_translations"
-        return 0
+        # Cleanup and fail
+        rm -f "$test_config"
+        return 1
     fi
 }
 
-# P3 Integration Test: HTTP caching integration
-test_p3_http_caching_integration() {
+# P3 Integration Test: State machine boundary enforcement
+test_p3_state_machine_boundary_enforcement() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
-    source "$(get_module_path http)"
+    source "$(get_module_path state-machine)"
+    source "$(get_module_path command)"
     
-    # Skip if no HTTP client available
-    if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+    # Test state machine enforcing boundaries for P2 operations
+    state_machine_init "uninitialized"
+    
+    # Register a boundary enforcer for initialized state
+    local enforcer_called=false
+    test_boundary_enforcer() {
+        enforcer_called=true
         return 0
-    fi
+    }
     
-    # Test that HTTP integrates with P2 cache layer
+    register_state "secure_state" "State requiring security validation"
+    register_boundary_enforcer "secure_state" "test_boundary_enforcer"
+    register_transition "uninitialized" "secure_state"
     
-    # First request (should hit network)
-    http_get "https://httpbin.org/uuid"
+    # Transition to secure state (should call enforcer)
+    transition_to_state "secure_state"
     
-    if http_succeeded; then
-        local first_response="$(get_http_response)"
-        local cache_hits_before="$ABADDON_HTTP_CACHE_HITS"
+    # Verify boundary enforcer was called
+    require_state "secure_state" "test operation"
+    
+    [[ "$enforcer_called" == "true" ]] && [[ "$(get_current_state)" == "secure_state" ]]
+}
+
+# P3 Integration Test: State machine + KV workflow orchestration
+test_p3_state_machine_kv_workflow() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    source "$(get_module_path cache)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
+    source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
+    source "$(get_module_path command)"
+    
+    # Test state machine orchestrating KV operations
+    state_machine_init "uninitialized"
+    
+    # Create test config for KV operations
+    local test_config="/tmp/test_p3_kv_workflow_$$"
+    cat > "$test_config" << 'EOF'
+{
+  "workflow": {
+    "step1": "extract_data",
+    "step2": "validate_data", 
+    "step3": "process_data"
+  }
+}
+EOF
+    
+    # Register workflow states
+    register_state "extracting" "Data extraction phase"
+    register_state "validating" "Data validation phase"
+    register_state "processing" "Data processing phase"
+    register_state "completed" "Workflow completed"
+    
+    # Register transitions
+    register_transition "uninitialized" "extracting"
+    register_transition "extracting" "validating"
+    register_transition "validating" "processing"
+    register_transition "processing" "completed"
+    
+    # Execute workflow with state transitions
+    transition_to_state "extracting"
+    get_config_value "workflow.step1" "$test_config" ""
+    local step1_data="$(get_kv_value)"
+    
+    transition_to_state "validating"
+    get_config_value "workflow.step2" "$test_config" ""
+    local step2_data="$(get_kv_value)"
+    
+    transition_to_state "processing"
+    get_config_value "workflow.step3" "$test_config" ""
+    local step3_data="$(get_kv_value)"
+    
+    transition_to_state "completed"
+    
+    # Cleanup
+    rm -f "$test_config"
+    
+    # Verify workflow state progression and data extraction
+    [[ "$(get_current_state)" == "completed" ]] && \
+    [[ "$(get_transition_count)" == "4" ]] && \
+    [[ "$step1_data" == "extract_data" ]] && \
+    [[ "$step2_data" == "validate_data" ]] && \
+    [[ "$step3_data" == "process_data" ]]
+}
+
+# P3 Integration Test: Cross-layer P2→P3 state coordination 
+test_p3_cross_layer_coordination() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    source "$(get_module_path cache)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
+    source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
+    source "$(get_module_path command)"
+    
+    # Test that P3 state machine coordinates with P2 layer properly
+    
+    # P2: Cache some data
+    cache_store "coordination_test" "P2_cached_value"
+    
+    # P3: Use state machine to orchestrate access
+    state_machine_init "uninitialized"
+    register_state "cache_ready" "Cache is accessible"
+    register_transition "uninitialized" "cache_ready"
+    
+    # State-dependent cache access
+    transition_to_state "cache_ready"
+    require_state "cache_ready" "cache_access"
+    
+    if state_machine_succeeded; then
+        local cached_value="$(cache_get "coordination_test")"
         
-        # Second identical request (should hit cache)
-        http_get "https://httpbin.org/uuid"
-        
-        if http_succeeded; then
-            local second_response="$(get_http_response)"
-            local cache_hits_after="$ABADDON_HTTP_CACHE_HITS"
-            
-            # Verify caching worked (same response, cache hit incremented)
-            [[ "$first_response" == "$second_response" ]] && \
-            [[ $cache_hits_after -gt $cache_hits_before ]]
-        else
-            return 0
-        fi
+        # Verify P2 data persisted and P3 state coordination works
+        [[ "$(get_current_state)" == "cache_ready" ]] && \
+        [[ "$cached_value" == "P2_cached_value" ]]
     else
-        return 0
+        return 1
     fi
+}
+
+# P3 Integration Test: Error propagation and state recovery
+test_p3_error_propagation_recovery() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    source "$(get_module_path cache)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
+    source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
+    source "$(get_module_path command)"
+    
+    # Test state machine handling P2 errors and recovery
+    state_machine_init "uninitialized"
+    
+    # Register error and recovery states
+    register_state "processing" "Normal processing state"
+    register_state "error_state" "Error recovery state"
+    register_state "recovered" "Recovered from error"
+    
+    register_transition "uninitialized" "processing"
+    register_transition "processing" "error_state"
+    register_transition "error_state" "recovered"
+    register_transition "uninitialized" "error_state"
+    
+    # Simulate P2 error (invalid file access)
+    validate_file_exists "/nonexistent/file/$$"
+    local security_status="$(get_security_status)"
+    
+    if [[ "$security_status" == "error" ]]; then
+        # State machine handles error
+        transition_to_state "error_state"
+        set_state_machine_error "P2 security validation failed"
+        
+        # Attempt recovery
+        clear_security_state  # P2 recovery
+        transition_to_state "recovered"
+        set_state_machine_success
+        
+        # Verify error handling and recovery
+        [[ "$(get_current_state)" == "recovered" ]] && \
+        [[ "$(get_state_machine_status)" != "error" ]]
+    else
+        # Should have detected error
+        return 1
+    fi
+}
+
+# P3 Integration Test: Command + State Machine Orchestration
+test_p3_command_state_orchestration() {
+    source "$(get_module_path core)"
+    source "$(get_module_path platform)"
+    source "$(get_module_path cache)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
+    source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
+    source "$(get_module_path command)"
+    
+    # Test commands + state-machine coordination
+    state_machine_init "uninitialized"
+    commands_init "test-orchestration"
+    
+    # Register command that requires specific state
+    test_state_command() {
+        require_state "ready" "test_operation"
+        echo "command executed in ready state"
+    }
+    
+    register_command "test" "State-dependent command" "test_state_command"
+    
+    # Register states and transitions
+    register_state "ready" "Ready for operations"
+    register_transition "uninitialized" "ready"
+    
+    # Execute workflow: transition → command execution
+    transition_to_state "ready"
+    execute_command "test" >/dev/null 2>&1
+    
+    [[ "$(get_current_state)" == "ready" ]] && \
+    [[ "$(get_commands_status)" == "success" ]]
 }
 
 # Register P3 integration tests
-run_test "P3 integration: i18n + KV coordination" test_p3_i18n_kv_coordination
-run_test "P3 integration: P2→P3 data flow" test_p3_p2_data_flow
-run_test "P3 integration: Cross-layer state management" test_p3_cross_layer_state
-run_test "P3 integration: P1→P2→P3 complete stack" test_p3_complete_stack_integration
-run_test "P3 integration: Error propagation through layers" test_p3_error_propagation
-run_test "P3 integration: HTTP + KV coordination" test_p3_http_kv_coordination
-run_test "P3 integration: HTTP + i18n coordination" test_p3_http_i18n_coordination
-run_test "P3 integration: Complete P3 data flow (HTTP→KV→i18n)" test_p3_complete_data_flow
-run_test "P3 integration: HTTP caching integration" test_p3_http_caching_integration
+run_test "P3 integration: State machine + P2 data coordination" test_p3_state_machine_p2_coordination
+run_test "P3 integration: State machine boundary enforcement" test_p3_state_machine_boundary_enforcement
+run_test "P3 integration: State machine + KV workflow orchestration" test_p3_state_machine_kv_workflow
+run_test "P3 integration: Cross-layer P2→P3 state coordination" test_p3_cross_layer_coordination
+run_test "P3 integration: Error propagation and state recovery" test_p3_error_propagation_recovery
+run_test "P3 integration: Command + State Machine orchestration" test_p3_command_state_orchestration

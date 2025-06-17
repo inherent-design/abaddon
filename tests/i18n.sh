@@ -11,8 +11,10 @@ test_i18n_loads_with_dependencies() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path i18n)"
     [[ "${ABADDON_I18N_LOADED:-}" == "1" ]]
 }
@@ -22,8 +24,10 @@ test_i18n_state_reset() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path i18n)"
     
     clear_i18n_state
@@ -35,8 +39,10 @@ test_i18n_basic_init() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path i18n)"
     
     # Create minimal test translation file
@@ -58,8 +64,10 @@ test_i18n_locale_detection() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path i18n)"
     
     local test_dir="/tmp/abaddon_i18n_$$"
@@ -82,8 +90,10 @@ test_i18n_basic_translation() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path i18n)"
     
     local test_dir="/tmp/abaddon_i18n_$$"
@@ -107,8 +117,10 @@ test_i18n_variable_substitution() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path i18n)"
     
     local test_dir="/tmp/abaddon_i18n_$$"
@@ -132,8 +144,10 @@ test_i18n_missing_key() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path i18n)"
     
     local test_dir="/tmp/abaddon_i18n_$$"
@@ -157,8 +171,10 @@ test_i18n_uninitialized() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
+    source "$(get_module_path datatypes)"
     source "$(get_module_path kv)"
+    source "$(get_module_path state-machine)"
     source "$(get_module_path i18n)"
     
     clear_i18n_state

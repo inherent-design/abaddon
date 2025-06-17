@@ -1,52 +1,52 @@
 #!/usr/bin/env bash
-# Abaddon Validation - Pure validation logic utility module
+# Abaddon Security - Security validation and path safety
 # Version: 1.0.0
-# Purpose: Shared validation services for all Abaddon modules
+# Purpose: Path traversal prevention, injection safety, filesystem security
 
 set -u  # Catch undefined variables (linting-like behavior)
 
 # Load guard
-[[ -n "${ABADDON_VALIDATION_LOADED:-}" ]] && return 0
-readonly ABADDON_VALIDATION_LOADED=1
+[[ -n "${ABADDON_SECURITY_LOADED:-}" ]] && return 0
+readonly ABADDON_SECURITY_LOADED=1
 
 # Dependency check
 [[ -n "${ABADDON_CORE_LOADED:-}" ]] || {
-    echo "ERROR: abaddon-validation.sh requires abaddon-core.sh to be loaded first" >&2
+    echo "ERROR: abaddon-security.sh requires abaddon-core.sh to be loaded first" >&2
     return 1
 }
 
 [[ -n "${ABADDON_PLATFORM_LOADED:-}" ]] || {
-    echo "ERROR: abaddon-validation.sh requires abaddon-platform.sh to be loaded first" >&2
+    echo "ERROR: abaddon-security.sh requires abaddon-platform.sh to be loaded first" >&2
     return 1
 }
 
 # State variables for validation results
-declare -g ABADDON_VALIDATION_STATUS=""
-declare -g ABADDON_VALIDATION_ERROR_MESSAGE=""
-declare -g ABADDON_VALIDATION_DETAILS=""
+declare -g ABADDON_SECURITY_STATUS=""
+declare -g ABADDON_SECURITY_ERROR_MESSAGE=""
+declare -g ABADDON_SECURITY_DETAILS=""
 
 # Validation result constants
-readonly ABADDON_VALIDATION_SUCCESS="success"
-readonly ABADDON_VALIDATION_ERROR="error"
-readonly ABADDON_VALIDATION_WARNING="warning"
+readonly ABADDON_SECURITY_SUCCESS="success"
+readonly ABADDON_SECURITY_ERROR="error"
+readonly ABADDON_SECURITY_WARNING="warning"
 
 # ============================================================================
 # MODULE CONTRACT INTERFACE (MANDATORY for all Abaddon modules)
 # ============================================================================
 
-# Clear all validation module state variables
-clear_validation_state() {
-    ABADDON_VALIDATION_STATUS=""
-    ABADDON_VALIDATION_ERROR_MESSAGE=""
-    ABADDON_VALIDATION_DETAILS=""
-    log_debug "Validation module state cleared"
+# Clear all security module state variables
+clear_security_state() {
+    ABADDON_SECURITY_STATUS=""
+    ABADDON_SECURITY_ERROR_MESSAGE=""
+    ABADDON_SECURITY_DETAILS=""
+    log_debug "Security module state cleared"
 }
 
 # Return module status: "ready|error|incomplete|unknown"
-get_validation_status() {
-    if [[ "$ABADDON_VALIDATION_STATUS" == "$ABADDON_VALIDATION_SUCCESS" ]]; then
+get_security_status() {
+    if [[ "$ABADDON_SECURITY_STATUS" == "$ABADDON_SECURITY_SUCCESS" ]]; then
         echo "ready"
-    elif [[ "$ABADDON_VALIDATION_STATUS" == "$ABADDON_VALIDATION_ERROR" ]]; then
+    elif [[ "$ABADDON_SECURITY_STATUS" == "$ABADDON_SECURITY_ERROR" ]]; then
         echo "error"
     elif [[ -n "${ABADDON_CORE_LOADED:-}" && -n "${ABADDON_PLATFORM_LOADED:-}" ]]; then
         echo "ready"
@@ -55,15 +55,15 @@ get_validation_status() {
     fi
 }
 
-# Export validation state for cross-module access
-export_validation_state() {
-    echo "ABADDON_VALIDATION_STATUS='$ABADDON_VALIDATION_STATUS'"
-    echo "ABADDON_VALIDATION_ERROR_MESSAGE='$ABADDON_VALIDATION_ERROR_MESSAGE'"
-    echo "ABADDON_VALIDATION_DETAILS='$ABADDON_VALIDATION_DETAILS'"
+# Export security state for cross-module access
+export_security_state() {
+    echo "ABADDON_SECURITY_STATUS='$ABADDON_SECURITY_STATUS'"
+    echo "ABADDON_SECURITY_ERROR_MESSAGE='$ABADDON_SECURITY_ERROR_MESSAGE'"
+    echo "ABADDON_SECURITY_DETAILS='$ABADDON_SECURITY_DETAILS'"
 }
 
-# Validate validation module state consistency
-validate_validation_state() {
+# Validate security module state consistency
+validate_security_state() {
     local errors=0
     local validation_messages=()
     
@@ -71,7 +71,7 @@ validate_validation_state() {
     local required_functions=(
         "validate_file_path" "validate_file_exists" "validate_directory_path"
         "validate_json_content" "validate_yaml_content" "validate_field_required"
-        "clear_validation_state" "get_validation_status" "export_validation_state"
+        "clear_security_state" "get_security_status" "export_security_state"
     )
     
     for func in "${required_functions[@]}"; do
@@ -83,7 +83,7 @@ validate_validation_state() {
     
     # Check state variables exist
     local required_vars=(
-        "ABADDON_VALIDATION_STATUS" "ABADDON_VALIDATION_ERROR_MESSAGE" "ABADDON_VALIDATION_DETAILS"
+        "ABADDON_SECURITY_STATUS" "ABADDON_SECURITY_ERROR_MESSAGE" "ABADDON_SECURITY_DETAILS"
     )
     
     for var in "${required_vars[@]}"; do
@@ -106,10 +106,10 @@ validate_validation_state() {
     
     # Output validation results
     if [[ $errors -eq 0 ]]; then
-        log_debug "Validation module validation: PASSED"
+        log_debug "Security module validation: PASSED"
         return 0
     else
-        log_error "Validation module validation: FAILED ($errors errors)"
+        log_error "Security module validation: FAILED ($errors errors)"
         for msg in "${validation_messages[@]}"; do
             log_error "  - $msg"
         done
@@ -117,28 +117,28 @@ validate_validation_state() {
     fi
 }
 
-# Set validation error state
-set_validation_error() {
+# Set security error state
+set_security_error() {
     local error_message="$1"
     local details="${2:-}"
     
-    ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_ERROR"
-    ABADDON_VALIDATION_ERROR_MESSAGE="$error_message"
-    ABADDON_VALIDATION_DETAILS="$details"
+    ABADDON_SECURITY_STATUS="$ABADDON_SECURITY_ERROR"
+    ABADDON_SECURITY_ERROR_MESSAGE="$error_message"
+    ABADDON_SECURITY_DETAILS="$details"
     
-    log_debug "Validation error: $error_message"
+    log_debug "Security error: $error_message"
     return 1
 }
 
-# Set validation success state
-set_validation_success() {
+# Set security success state
+set_security_success() {
     local details="${1:-}"
     
-    ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_SUCCESS"
-    ABADDON_VALIDATION_ERROR_MESSAGE=""
-    ABADDON_VALIDATION_DETAILS="$details"
+    ABADDON_SECURITY_STATUS="$ABADDON_SECURITY_SUCCESS"
+    ABADDON_SECURITY_ERROR_MESSAGE=""
+    ABADDON_SECURITY_DETAILS="$details"
     
-    log_debug "Validation success: $details"
+    log_debug "Security success: $details"
     return 0
 }
 
@@ -151,39 +151,39 @@ validate_file_path() {
     local file_path="$1"
     local allow_absolute="${2:-false}"
     
-    clear_validation_state
+    clear_security_state
     
     # Basic existence check
     if [[ -z "$file_path" ]]; then
-        set_validation_error "File path cannot be empty"
+        set_security_error "File path cannot be empty"
         return $?
     fi
     
     # Path traversal prevention
     if [[ "$file_path" =~ \.\./|^/ ]] && [[ "$allow_absolute" != "true" ]]; then
-        set_validation_error "Path traversal detected" "Relative paths only: $file_path"
+        set_security_error "Path traversal detected" "Relative paths only: $file_path"
         return $?
     fi
     
     # Null byte injection prevention
     if [[ "$file_path" =~ $'\0' ]]; then
-        set_validation_error "Null byte injection detected" "Path: $file_path"
+        set_security_error "Null byte injection detected" "Path: $file_path"
         return $?
     fi
     
     # Control character prevention
     if [[ "$file_path" =~ [[:cntrl:]] ]]; then
-        set_validation_error "Control characters detected" "Path: $file_path"
+        set_security_error "Control characters detected" "Path: $file_path"
         return $?
     fi
     
     # Length validation (reasonable limit)
     if [[ ${#file_path} -gt 4096 ]]; then
-        set_validation_error "Path too long" "Max 4096 characters: ${#file_path}"
+        set_security_error "Path too long" "Max 4096 characters: ${#file_path}"
         return $?
     fi
     
-    set_validation_success "File path validated: $file_path"
+    set_security_success "File path validated: $file_path"
     return $?
 }
 
@@ -191,7 +191,7 @@ validate_file_path() {
 validate_file_exists() {
     local file_path="$1"
     
-    clear_validation_state
+    clear_security_state
     
     # First validate the path itself
     if ! validate_file_path "$file_path" true; then
@@ -200,17 +200,17 @@ validate_file_exists() {
     
     # Check existence
     if [[ ! -f "$file_path" ]]; then
-        set_validation_error "File not found" "Path: $file_path"
+        set_security_error "File not found" "Path: $file_path"
         return $?
     fi
     
     # Check readability
     if [[ ! -r "$file_path" ]]; then
-        set_validation_error "File not readable" "Path: $file_path"
+        set_security_error "File not readable" "Path: $file_path"
         return $?
     fi
     
-    set_validation_success "File exists and readable: $file_path"
+    set_security_success "File exists and readable: $file_path"
     return $?
 }
 
@@ -219,7 +219,7 @@ validate_directory_path() {
     local dir_path="$1"
     local create_if_missing="${2:-false}"
     
-    clear_validation_state
+    clear_security_state
     
     # First validate the path itself
     if ! validate_file_path "$dir_path" true; then
@@ -230,25 +230,25 @@ validate_directory_path() {
     if [[ ! -d "$dir_path" ]]; then
         if [[ "$create_if_missing" == "true" ]]; then
             if mkdir -p "$dir_path" 2>/dev/null; then
-                set_validation_success "Directory created: $dir_path"
+                set_security_success "Directory created: $dir_path"
                 return $?
             else
-                set_validation_error "Cannot create directory" "Path: $dir_path"
+                set_security_error "Cannot create directory" "Path: $dir_path"
                 return $?
             fi
         else
-            set_validation_error "Directory not found" "Path: $dir_path"
+            set_security_error "Directory not found" "Path: $dir_path"
             return $?
         fi
     fi
     
     # Check accessibility
     if [[ ! -r "$dir_path" ]] || [[ ! -x "$dir_path" ]]; then
-        set_validation_error "Directory not accessible" "Path: $dir_path"
+        set_security_error "Directory not accessible" "Path: $dir_path"
         return $?
     fi
     
-    set_validation_success "Directory validated: $dir_path"
+    set_security_success "Directory validated: $dir_path"
     return $?
 }
 
@@ -263,10 +263,10 @@ normalize_query_path() {
     local tool="$1"
     local abaddon_path="$2"
     
-    clear_validation_state
+    clear_security_state
     
     if [[ -z "$tool" ]] || [[ -z "$abaddon_path" ]]; then
-        set_validation_error "Tool and path are required for normalization"
+        set_security_error "Tool and path are required for normalization"
         return $?
     fi
     
@@ -290,22 +290,22 @@ normalize_query_path() {
             normalized_path="$abaddon_path"
             ;;
         *)
-            set_validation_error "Unsupported tool for path normalization" "Tool: $tool"
+            set_security_error "Unsupported tool for path normalization" "Tool: $tool"
             return $?
             ;;
     esac
     
     # Store result in state variable instead of echo (no stdout pollution)
-    ABADDON_VALIDATION_DETAILS="$normalized_path"
-    ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_SUCCESS"
-    ABADDON_VALIDATION_ERROR_MESSAGE=""
+    ABADDON_SECURITY_DETAILS="$normalized_path"
+    ABADDON_SECURITY_STATUS="$ABADDON_SECURITY_SUCCESS"
+    ABADDON_SECURITY_ERROR_MESSAGE=""
     log_debug "Path normalized for $tool: $normalized_path"
     return 0
 }
 
 # Get the normalized path from last normalization
 get_normalized_path() {
-    echo "$ABADDON_VALIDATION_DETAILS"
+    echo "$ABADDON_SECURITY_DETAILS"
 }
 
 # ============================================================================
@@ -319,10 +319,10 @@ validate_and_extract() {
     local abaddon_path="$3"
     local default_value="${4:-}"
     
-    clear_validation_state
+    clear_security_state
     
     if [[ -z "$format" ]] || [[ -z "$content" ]]; then
-        set_validation_error "Format and content are required"
+        set_security_error "Format and content are required"
         return $?
     fi
     
@@ -346,7 +346,7 @@ validate_and_extract() {
                     fi
                 fi
             else
-                set_validation_error "No tool available for JSON processing"
+                set_security_error "No tool available for JSON processing"
                 return $?
             fi
             ;;
@@ -366,7 +366,7 @@ validate_and_extract() {
                     fi
                 fi
             else
-                set_validation_error "No tool available for YAML processing"
+                set_security_error "No tool available for YAML processing"
                 return $?
             fi
             ;;
@@ -386,7 +386,7 @@ validate_and_extract() {
                     fi
                 fi
             else
-                set_validation_error "No tool available for TOML processing"
+                set_security_error "No tool available for TOML processing"
                 return $?
             fi
             ;;
@@ -408,12 +408,12 @@ validate_and_extract() {
                     fi
                 fi
             else
-                set_validation_error "No tool available for XML processing"
+                set_security_error "No tool available for XML processing"
                 return $?
             fi
             ;;
         *)
-            set_validation_error "Unsupported format" "Format: $format"
+            set_security_error "Unsupported format" "Format: $format"
             return $?
             ;;
     esac
@@ -422,31 +422,31 @@ validate_and_extract() {
     if [[ -z "$extracted_value" ]]; then
         if [[ -n "$default_value" ]]; then
             extracted_value="$default_value"
-            ABADDON_VALIDATION_DETAILS="$extracted_value"
-            ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_SUCCESS"
-            ABADDON_VALIDATION_ERROR_MESSAGE=""
+            ABADDON_SECURITY_DETAILS="$extracted_value"
+            ABADDON_SECURITY_STATUS="$ABADDON_SECURITY_SUCCESS"
+            ABADDON_SECURITY_ERROR_MESSAGE=""
             log_debug "Used default value for missing field: $extracted_value"
             return 0
         else
-            set_validation_error "Field not found and no default provided" "Path: $abaddon_path"
+            set_security_error "Field not found and no default provided" "Path: $abaddon_path"
             return $?
         fi
     elif [[ "$extracted_value" == "null" ]]; then
         if [[ -n "$default_value" ]]; then
             extracted_value="$default_value"
-            ABADDON_VALIDATION_DETAILS="$extracted_value"
-            ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_SUCCESS"
-            ABADDON_VALIDATION_ERROR_MESSAGE=""
+            ABADDON_SECURITY_DETAILS="$extracted_value"
+            ABADDON_SECURITY_STATUS="$ABADDON_SECURITY_SUCCESS"
+            ABADDON_SECURITY_ERROR_MESSAGE=""
             log_debug "Used default value for null field: $extracted_value"
             return 0
         else
-            set_validation_error "Field is null and no default provided" "Path: $abaddon_path"
+            set_security_error "Field is null and no default provided" "Path: $abaddon_path"
             return $?
         fi
     else
-        ABADDON_VALIDATION_DETAILS="$extracted_value"
-        ABADDON_VALIDATION_STATUS="$ABADDON_VALIDATION_SUCCESS"
-        ABADDON_VALIDATION_ERROR_MESSAGE=""
+        ABADDON_SECURITY_DETAILS="$extracted_value"
+        ABADDON_SECURITY_STATUS="$ABADDON_SECURITY_SUCCESS"
+        ABADDON_SECURITY_ERROR_MESSAGE=""
         log_debug "Successfully extracted value: $extracted_value"
         return 0
     fi
@@ -454,7 +454,7 @@ validate_and_extract() {
 
 # Get extracted value from last validation
 get_extracted_value() {
-    echo "$ABADDON_VALIDATION_DETAILS"
+    echo "$ABADDON_SECURITY_DETAILS"
 }
 
 # Validate JSON content
@@ -487,10 +487,10 @@ validate_field_required() {
     local data_content="$2"
     local format="${3:-json}"
     
-    clear_validation_state
+    clear_security_state
     
     if [[ -z "$field_path" ]]; then
-        set_validation_error "Field path cannot be empty"
+        set_security_error "Field path cannot be empty"
         return $?
     fi
     
@@ -511,17 +511,17 @@ validate_field_required() {
             fi
             ;;
         *)
-            set_validation_error "Unsupported format for field validation" "Format: $format"
+            set_security_error "Unsupported format for field validation" "Format: $format"
             return $?
             ;;
     esac
     
     if [[ -z "$field_value" ]]; then
-        set_validation_error "Required field missing" "Field: $field_path"
+        set_security_error "Required field missing" "Field: $field_path"
         return $?
     fi
     
-    set_validation_success "Required field present: $field_path"
+    set_security_success "Required field present: $field_path"
     return $?
 }
 
@@ -530,10 +530,10 @@ validate_value_in_list() {
     local value="$1"
     local allowed_list="$2"  # Comma-separated values
     
-    clear_validation_state
+    clear_security_state
     
     if [[ -z "$value" ]]; then
-        set_validation_error "Value cannot be empty"
+        set_security_error "Value cannot be empty"
         return $?
     fi
     
@@ -542,12 +542,12 @@ validate_value_in_list() {
     
     for allowed in "${allowed_values[@]}"; do
         if [[ "$value" == "$allowed" ]]; then
-            set_validation_success "Value in allowed list: $value"
+            set_security_success "Value in allowed list: $value"
             return $?
         fi
     done
     
-    set_validation_error "Value not in allowed list" "Value: $value, Allowed: $allowed_list"
+    set_security_error "Value not in allowed list" "Value: $value, Allowed: $allowed_list"
     return $?
 }
 
@@ -557,27 +557,27 @@ validate_numeric_range() {
     local min_value="$2"
     local max_value="$3"
     
-    clear_validation_state
+    clear_security_state
     
     # Check if value is numeric
     if ! [[ "$value" =~ ^[0-9]+$ ]]; then
-        set_validation_error "Value is not numeric" "Value: $value"
+        set_security_error "Value is not numeric" "Value: $value"
         return $?
     fi
     
     # Check minimum
     if [[ -n "$min_value" ]] && (( value < min_value )); then
-        set_validation_error "Value below minimum" "Value: $value, Min: $min_value"
+        set_security_error "Value below minimum" "Value: $value, Min: $min_value"
         return $?
     fi
     
     # Check maximum  
     if [[ -n "$max_value" ]] && (( value > max_value )); then
-        set_validation_error "Value above maximum" "Value: $value, Max: $max_value"
+        set_security_error "Value above maximum" "Value: $value, Max: $max_value"
         return $?
     fi
     
-    set_validation_success "Value in range: $value"
+    set_security_success "Value in range: $value"
     return $?
 }
 
@@ -590,7 +590,7 @@ validate_json_schema() {
     local json_content="$1"
     local schema_file="$2"
     
-    clear_validation_state
+    clear_security_state
     
     # First validate inputs
     if ! validate_json_content "$json_content"; then
@@ -608,18 +608,18 @@ validate_json_schema() {
         
         if jsonschema validate "$schema_file" "$temp_json" >/dev/null 2>&1; then
             rm -f "$temp_json"
-            set_validation_success "JSON schema validation passed"
+            set_security_success "JSON schema validation passed"
             return $?
         else
             local error_details=$(jsonschema validate "$schema_file" "$temp_json" 2>&1 | head -3)
             rm -f "$temp_json"
-            set_validation_error "JSON schema validation failed" "$error_details"
+            set_security_error "JSON schema validation failed" "$error_details"
             return $?
         fi
     else
         # Fallback: basic content validation only
         log_warn "jsonschema CLI not available, performing basic JSON validation only"
-        set_validation_success "Basic JSON validation passed (no schema check)"
+        set_security_success "Basic JSON validation passed (no schema check)"
         return $?
     fi
 }
@@ -632,20 +632,20 @@ validate_json_schema() {
 validate_command_name() {
     local command_name="$1"
     
-    clear_validation_state
+    clear_security_state
     
     if [[ -z "$command_name" ]]; then
-        set_validation_error "Command name cannot be empty"
+        set_security_error "Command name cannot be empty"
         return $?
     fi
     
     # Command names should be alphanumeric with hyphens
     if [[ ! "$command_name" =~ ^[a-z][a-z0-9-]*$ ]]; then
-        set_validation_error "Invalid command name format" "Must be lowercase, alphanumeric with hyphens: $command_name"
+        set_security_error "Invalid command name format" "Must be lowercase, alphanumeric with hyphens: $command_name"
         return $?
     fi
     
-    set_validation_success "Command name valid: $command_name"
+    set_security_success "Command name valid: $command_name"
     return $?
 }
 
@@ -653,26 +653,26 @@ validate_command_name() {
 validate_project_name() {
     local project_name="$1"
     
-    clear_validation_state
+    clear_security_state
     
     if [[ -z "$project_name" ]]; then
-        set_validation_error "Project name cannot be empty"
+        set_security_error "Project name cannot be empty"
         return $?
     fi
     
     # Project names should be safe for filesystems
     if [[ ! "$project_name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]]; then
-        set_validation_error "Invalid project name format" "Must be alphanumeric with underscores/hyphens: $project_name"
+        set_security_error "Invalid project name format" "Must be alphanumeric with underscores/hyphens: $project_name"
         return $?
     fi
     
     # Length check
     if [[ ${#project_name} -gt 64 ]]; then
-        set_validation_error "Project name too long" "Max 64 characters: ${#project_name}"
+        set_security_error "Project name too long" "Max 64 characters: ${#project_name}"
         return $?
     fi
     
-    set_validation_success "Project name valid: $project_name"
+    set_security_success "Project name valid: $project_name"
     return $?
 }
 
@@ -680,43 +680,43 @@ validate_project_name() {
 # Validation State Access
 # ============================================================================
 
-# Get current validation status
-get_validation_status() {
-    echo "$ABADDON_VALIDATION_STATUS"
+# Get current security status
+get_security_status() {
+    echo "$ABADDON_SECURITY_STATUS"
 }
 
-# Get validation error message
-get_validation_error() {
-    echo "$ABADDON_VALIDATION_ERROR_MESSAGE"
+# Get security error message
+get_security_error() {
+    echo "$ABADDON_SECURITY_ERROR_MESSAGE"
 }
 
-# Get validation details
-get_validation_details() {
-    echo "$ABADDON_VALIDATION_DETAILS"
+# Get security details
+get_security_details() {
+    echo "$ABADDON_SECURITY_DETAILS"
 }
 
-# Check if last validation was successful
-validation_succeeded() {
-    [[ "$ABADDON_VALIDATION_STATUS" == "$ABADDON_VALIDATION_SUCCESS" ]]
+# Check if last security validation was successful
+security_succeeded() {
+    [[ "$ABADDON_SECURITY_STATUS" == "$ABADDON_SECURITY_SUCCESS" ]]
 }
 
-# Check if last validation failed
-validation_failed() {
-    [[ "$ABADDON_VALIDATION_STATUS" == "$ABADDON_VALIDATION_ERROR" ]]
+# Check if last security validation failed
+security_failed() {
+    [[ "$ABADDON_SECURITY_STATUS" == "$ABADDON_SECURITY_ERROR" ]]
 }
 
 # ============================================================================
 # Module Validation and Information
 # ============================================================================
 
-# Validate validation module functionality
-validation_validate() {
+# Validate security module functionality
+security_validate() {
     local errors=0
     
     # Check required functions exist
     local required_functions=(
         "validate_file_path" "validate_file_exists" "validate_json_content"
-        "clear_validation_state" "set_validation_error" "set_validation_success"
+        "clear_security_state" "set_security_error" "set_security_success"
     )
     
     for func in "${required_functions[@]}"; do
@@ -728,7 +728,7 @@ validation_validate() {
     
     # Check state variables exist
     local required_vars=(
-        "ABADDON_VALIDATION_STATUS" "ABADDON_VALIDATION_ERROR" "ABADDON_VALIDATION_DETAILS"
+        "ABADDON_SECURITY_STATUS" "ABADDON_SECURITY_ERROR" "ABADDON_SECURITY_DETAILS"
     )
     
     for var in "${required_vars[@]}"; do
@@ -753,8 +753,8 @@ validation_validate() {
 }
 
 # Module information
-validation_info() {
-    echo "Abaddon Validation - Security & tool path normalization"
+security_info() {
+    echo "Abaddon Security - Security validation and path safety"
     echo "Version: 1.0.0"
     echo "Dependencies: core.sh, platform.sh"
     echo "Features: Path validation, content validation, tool normalization"
@@ -765,4 +765,4 @@ validation_info() {
     echo "  validate_json_content(content)"
 }
 
-log_debug "Abaddon validation module loaded"
+log_debug "Abaddon security module loaded"

@@ -6,7 +6,7 @@ test_p2_cache_validation_integration() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Initialize cache
     init_cache >/dev/null 2>&1
@@ -34,7 +34,7 @@ test_p2_cache_validation_workflow() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Initialize cache
     init_cache >/dev/null 2>&1
@@ -68,7 +68,7 @@ test_p2_cache_performance_optimization() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Initialize cache
     init_cache >/dev/null 2>&1
@@ -93,7 +93,7 @@ test_p2_complete_workflow() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Initialize cache
     init_cache >/dev/null 2>&1
@@ -105,7 +105,7 @@ test_p2_complete_workflow() {
     # Complete P2 workflow: Validation → Caching
     # 1. Validate file exists and is readable
     validate_file_exists "$test_file"
-    [[ "$(get_validation_status)" == "success" ]] || return 1
+    [[ "$(get_security_status)" == "success" ]] || return 1
     
     # 2. Cache validation results
     local cache_key="workflow_validation_$(echo -n "$test_file" | sha256sum | cut -d' ' -f1)"
@@ -130,13 +130,13 @@ test_p2_error_handling_coordination() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Test that errors propagate correctly through the P2 stack
     
     # 1. Invalid file path should fail validation
     validate_file_exists "/nonexistent/file/$$"
-    [[ "$(get_validation_status)" == "error" ]]
+    [[ "$(get_security_status)" == "error" ]]
 }
 
 # P2 Integration Test: State isolation
@@ -144,7 +144,7 @@ test_p2_state_isolation() {
     source "$(get_module_path core)"
     source "$(get_module_path platform)"
     source "$(get_module_path cache)"
-    source "$(get_module_path validation)"
+    source "$(get_module_path security)"
     
     # Test that P2 modules maintain separate state
     
@@ -152,11 +152,11 @@ test_p2_state_isolation() {
     init_cache >/dev/null 2>&1
     
     # Set different states in P2 modules
-    set_validation_error "validation error" "details"
+    set_security_error "validation error" "details"
     cache_store "test_key" "cache_value"
     
     # Verify states are independent
-    [[ "$(get_validation_status)" == "error" ]] && \
+    [[ "$(get_security_status)" == "error" ]] && \
     [[ "$(cache_get "test_key")" == "cache_value" ]]
 }
 

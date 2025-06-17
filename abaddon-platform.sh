@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Abaddon Platform - Opinionated tool management and promotion system
-# Fail-fast tool validation with clear installation guidance
+# Abaddon Platform - Core platform services and OS detection
+# Version: 2.0.0 - Enhanced for adaptive architecture
+# Purpose: Essential platform detection and cross-platform compatibility
 
 set -u  # Catch undefined variables (linting-like behavior)
 
@@ -17,47 +18,13 @@ readonly ABADDON_PLATFORM_LOADED=1
 # Platform module state variables (following framework pattern)
 declare -g ABADDON_PLATFORM_STATUS=""
 declare -g ABADDON_PLATFORM_ERROR_MESSAGE=""
-declare -g ABADDON_PLATFORM_TOOL_COUNTS=""
-declare -g ABADDON_PLATFORM_AVAILABLE_TOOLS=""
-declare -g ABADDON_PLATFORM_MISSING_TOOLS=""
+declare -g ABADDON_PLATFORM_OS_TYPE=""
+declare -g ABADDON_PLATFORM_OS_VERSION=""
+declare -g ABADDON_PLATFORM_ARCHITECTURE=""
 
 # Platform module constants
 readonly ABADDON_PLATFORM_SUCCESS="success"
 readonly ABADDON_PLATFORM_ERROR="error"
-
-# Modern tool registry - detects tools regardless of installation source
-# Format: "tool_name:common_path:description:suggested_source"
-declare -A ABADDON_PLATFORM_MODERN_TOOLS=(
-    ["fd"]="/opt/homebrew/bin/fd:Fast file finding:distro packages or brew"
-    ["rg"]="/opt/homebrew/bin/rg:Fast text search:distro packages or brew"
-    ["eza"]="/opt/homebrew/bin/eza:Modern file listing:cargo/brew/distro packages"
-    ["gdu"]="/opt/homebrew/bin/gdu:Fast disk usage analyzer:go toolchain recommended"
-    ["bat"]="~/.cargo/bin/bat:Syntax highlighted file viewer:cargo recommended"
-    ["jq"]="/opt/homebrew/bin/jq:JSON processor:distro packages or brew"
-    ["yq"]="/opt/homebrew/bin/yq:YAML processor:distro packages or brew"
-)
-
-# Platform-specific tools that are optional but recommended
-declare -A ABADDON_PLATFORM_TOOLS=(
-    # macOS specific
-    ["networksetup"]="/usr/sbin/networksetup:Network configuration:Built-in macOS tool"
-    ["brew"]="/opt/homebrew/bin/brew:Package manager:See https://brew.sh"
-    
-    # Cross-platform utilities
-    ["git"]="/usr/bin/git:Version control:Usually pre-installed"
-    ["curl"]="/usr/bin/curl:HTTP client:Usually pre-installed"
-)
-
-# Tool capability definitions
-declare -A ABADDON_PLATFORM_TOOL_CAPABILITIES=(
-    ["fd"]="parallel_search,type_filtering,ignore_patterns,json_output"
-    ["rg"]="parallel_search,json_output,type_filtering,context_lines,multiline"
-    ["eza"]="rich_listing,json_output,git_status,tree_view,icons,colors"
-    ["gdu"]="json_output,progress_display,parallel_analysis,interactive_mode"
-    ["bat"]="syntax_highlighting,git_integration,paging,themes"
-    ["jq"]="json_parsing,filtering,transformation,streaming"
-    ["yq"]="yaml_parsing,json_conversion,filtering,transformation"
-)
 
 # ============================================================================
 # MODULE CONTRACT INTERFACE (MANDATORY for all Abaddon modules)
@@ -67,9 +34,9 @@ declare -A ABADDON_PLATFORM_TOOL_CAPABILITIES=(
 clear_platform_state() {
     ABADDON_PLATFORM_STATUS=""
     ABADDON_PLATFORM_ERROR_MESSAGE=""
-    ABADDON_PLATFORM_TOOL_COUNTS=""
-    ABADDON_PLATFORM_AVAILABLE_TOOLS=""
-    ABADDON_PLATFORM_MISSING_TOOLS=""
+    ABADDON_PLATFORM_OS_TYPE=""
+    ABADDON_PLATFORM_OS_VERSION=""
+    ABADDON_PLATFORM_ARCHITECTURE=""
     log_debug "Platform module state cleared"
 }
 
@@ -79,7 +46,7 @@ get_platform_status() {
         echo "ready"
     elif [[ "$ABADDON_PLATFORM_STATUS" == "$ABADDON_PLATFORM_ERROR" ]]; then
         echo "error"
-    elif [[ -n "$ABADDON_PLATFORM_AVAILABLE_TOOLS" ]]; then
+    elif [[ -n "$ABADDON_PLATFORM_OS_TYPE" ]]; then
         echo "ready"
     else
         echo "incomplete"
@@ -90,9 +57,9 @@ get_platform_status() {
 export_platform_state() {
     echo "ABADDON_PLATFORM_STATUS='$ABADDON_PLATFORM_STATUS'"
     echo "ABADDON_PLATFORM_ERROR_MESSAGE='$ABADDON_PLATFORM_ERROR_MESSAGE'"
-    echo "ABADDON_PLATFORM_TOOL_COUNTS='$ABADDON_PLATFORM_TOOL_COUNTS'"
-    echo "ABADDON_PLATFORM_AVAILABLE_TOOLS='$ABADDON_PLATFORM_AVAILABLE_TOOLS'"
-    echo "ABADDON_PLATFORM_MISSING_TOOLS='$ABADDON_PLATFORM_MISSING_TOOLS'"
+    echo "ABADDON_PLATFORM_OS_TYPE='$ABADDON_PLATFORM_OS_TYPE'"
+    echo "ABADDON_PLATFORM_OS_VERSION='$ABADDON_PLATFORM_OS_VERSION'"
+    echo "ABADDON_PLATFORM_ARCHITECTURE='$ABADDON_PLATFORM_ARCHITECTURE'"
 }
 
 # Validate platform module state consistency
@@ -102,7 +69,7 @@ validate_platform_state() {
     
     # Check required functions exist
     local required_functions=(
-        "check_tool" "get_tool_version" "get_best_tool" "has_capability"
+        "detect_platform" "detect_os_type" "detect_architecture" "is_platform"
         "clear_platform_state" "get_platform_status" "export_platform_state"
     )
     
@@ -116,25 +83,12 @@ validate_platform_state() {
     # Check state variables exist
     local required_vars=(
         "ABADDON_PLATFORM_STATUS" "ABADDON_PLATFORM_ERROR_MESSAGE"
-        "ABADDON_PLATFORM_TOOL_COUNTS" "ABADDON_PLATFORM_AVAILABLE_TOOLS"
-        "ABADDON_PLATFORM_MISSING_TOOLS"
+        "ABADDON_PLATFORM_OS_TYPE" "ABADDON_PLATFORM_OS_VERSION" "ABADDON_PLATFORM_ARCHITECTURE"
     )
     
     for var in "${required_vars[@]}"; do
         if ! declare -p "$var" >/dev/null 2>&1; then
             validation_messages+=("Missing state variable: $var")
-            ((errors++))
-        fi
-    done
-    
-    # Check tool registries exist
-    local required_arrays=(
-        "ABADDON_PLATFORM_MODERN_TOOLS" "ABADDON_PLATFORM_TOOLS"
-    )
-    
-    for array in "${required_arrays[@]}"; do
-        if ! declare -p "$array" >/dev/null 2>&1; then
-            validation_messages+=("Missing tool registry: $array")
             ((errors++))
         fi
     done
@@ -158,7 +112,6 @@ validate_platform_state() {
     fi
 }
 
-
 # Set platform error state
 set_platform_error() {
     local error_message="$1"
@@ -173,443 +126,420 @@ set_platform_success() {
     ABADDON_PLATFORM_ERROR_MESSAGE=""
 }
 
-# Get tool information
-get_tool_info() {
-    local tool="$1"
-    local info_type="${2:-all}"
-    
-    if [[ -n "${ABADDON_PLATFORM_MODERN_TOOLS[$tool]:-}" ]]; then
-        IFS=':' read -r expected_path description install_cmd <<<"${ABADDON_PLATFORM_MODERN_TOOLS[$tool]}"
-    elif [[ -n "${ABADDON_PLATFORM_TOOLS[$tool]:-}" ]]; then
-        IFS=':' read -r expected_path description install_cmd <<<"${ABADDON_PLATFORM_TOOLS[$tool]}"
-    else
-        log_warn "Unknown tool: $tool"
-        return 1
-    fi
-    
-    case "$info_type" in
-        path) echo "$expected_path" ;;
-        description) echo "$description" ;;
-        install) echo "$install_cmd" ;;
-        capabilities) echo "${ABADDON_PLATFORM_TOOL_CAPABILITIES[$tool]:-basic}" ;;
-        all) 
-            echo "Path: $expected_path"
-            echo "Description: $description"
-            echo "Install: $install_cmd"
-            echo "Capabilities: ${ABADDON_PLATFORM_TOOL_CAPABILITIES[$tool]:-basic}"
-            ;;
-        *) 
-            log_error "Invalid info type: $info_type"
-            return 1
-            ;;
-    esac
-}
+# ============================================================================
+# Core Platform Detection
+# ============================================================================
 
-# Check if a tool is available and working
-check_tool() {
-    local tool="$1"
-    local quiet="${2:-false}"
+# Detect operating system type with enhanced classification
+detect_os_type() {
+    local os_type=$(uname -s)
+    local detected_type=""
     
-    if command -v "$tool" >/dev/null 2>&1; then
-        local tool_path
-        tool_path=$(command -v "$tool")
-        
-        # Test if tool actually works
-        if "$tool" --version >/dev/null 2>&1 || "$tool" -V >/dev/null 2>&1 || "$tool" -v >/dev/null 2>&1 || "$tool" -version >/dev/null 2>&1; then
-            [[ "$quiet" == "false" ]] && log_debug "✓ $tool available at $tool_path"
-            return 0
-        else
-            [[ "$quiet" == "false" ]] && log_warn "✗ $tool found but not working: $tool_path"
-            return 1
-        fi
-    else
-        [[ "$quiet" == "false" ]] && log_debug "✗ $tool not found in PATH"
-        return 1
-    fi
-}
-
-# Get tool version
-get_tool_version() {
-    local tool="$1"
-    
-    if ! check_tool "$tool" true; then
-        echo "not_available"
-        return 1
-    fi
-    
-    # Try different version flags
-    local version
-    if version=$("$tool" --version 2>/dev/null | head -1); then
-        echo "$version"
-    elif version=$("$tool" -V 2>/dev/null | head -1); then
-        echo "$version"
-    elif version=$("$tool" -v 2>/dev/null | head -1); then
-        echo "$version"
-    elif version=$("$tool" -version 2>/dev/null | head -1); then
-        echo "$version"
-    elif version=$("$tool" version 2>/dev/null | head -1); then
-        echo "$version"
-    else
-        echo "unknown"
-    fi
-}
-
-# Check tool availability and suggest installations (respects user environment)
-check_tool_availability() {
-    local required_tools=("${@:-fd rg eza gdu}")
-    local missing_tools=()
-    local working_tools=()
-    local suggest_only="${ABADDON_SUGGEST_ONLY:-false}"
-    
-    clear_platform_state
-    log_info "Checking modern tool availability..."
-    
-    for tool in "${required_tools[@]}"; do
-        if check_tool "$tool" true; then
-            local version
-            version=$(get_tool_version "$tool")
-            working_tools+=("$tool")
-            log_success "$tool: $version"
-        else
-            missing_tools+=("$tool")
-            local description
-            description=$(get_tool_info "$tool" description 2>/dev/null || echo "Modern development tool")
-            log_warn "Optional: $tool ($description)"
-        fi
-    done
-    
-    # Store state
-    ABADDON_PLATFORM_TOOL_COUNTS="${#working_tools[@]}/${#required_tools[@]}"
-    ABADDON_PLATFORM_AVAILABLE_TOOLS="${working_tools[*]}"
-    ABADDON_PLATFORM_MISSING_TOOLS="${missing_tools[*]}"
-    
-    if [[ ${#missing_tools[@]} -gt 0 ]]; then
-        if [[ "$suggest_only" == "true" ]]; then
-            log_info "Found ${#working_tools[@]}/${#required_tools[@]} modern tools"
-            suggest_tool_installation "${missing_tools[@]}"
-            set_platform_success
-            return 0  # Don't fail in suggestion mode
-        else
-            echo
-            log_info "Modern tools enhance performance but are optional"
-            log_info "Available: ${#working_tools[@]}/${#required_tools[@]} tools"
-            suggest_tool_installation "${missing_tools[@]}"
-            set_platform_error "Missing tools: ${missing_tools[*]}"
-            return 1  # Indicate missing tools for stricter callers
-        fi
-    fi
-    
-    log_success "All modern tools available (${#working_tools[@]}/${#required_tools[@]} tools)"
-    set_platform_success
-    return 0
-}
-
-# Backward compatibility alias removed - use check_tool_availability directly
-
-# Check tool capabilities
-has_capability() {
-    local tool="$1"
-    local capability="$2"
-    
-    if ! check_tool "$tool" true; then
-        return 1
-    fi
-    
-    local capabilities
-    capabilities=$(get_tool_info "$tool" capabilities 2>/dev/null || echo "basic")
-    
-    if [[ "$capabilities" == *"$capability"* ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-# Get best tool for a task
-get_best_tool() {
-    local task="$1"
-    
-    case "$task" in
-        file_search)
-            if check_tool "fd" true; then
-                echo "fd"
-            else
-                echo "find"
-            fi
-            ;;
-        text_search)
-            if check_tool "rg" true; then
-                echo "rg"
-            else
-                echo "grep"
-            fi
-            ;;
-        file_listing)
-            if check_tool "eza" true; then
-                echo "eza"
-            else
-                echo "ls"
-            fi
-            ;;
-        disk_usage)
-            if check_tool "gdu" true; then
-                echo "gdu"
-            elif check_tool "gdu-go" true; then
-                echo "gdu-go"
-            elif check_tool "ncdu" true; then
-                echo "ncdu"
-            else
-                echo "du"
-            fi
-            ;;
-        file_preview)
-            if check_tool "bat" true; then
-                echo "bat"
-            else
-                echo "cat"
-            fi
-            ;;
-        json_processing)
-            if check_tool "jq" true; then
-                echo "jq"
-            else
-                echo "none"
-            fi
-            ;;
-        yaml_processing)
-            if check_tool "yq" true; then
-                echo "yq"
-            else
-                echo "none"
-            fi
-            ;;
-        toml_processing)
-            if check_tool "tq" true; then
-                echo "tq"
-            else
-                echo "none"
-            fi
-            ;;
-        xml_processing)
-            if check_tool "xq" true; then
-                echo "xq"
-            else
-                echo "none"
-            fi
-            ;;
-        *)
-            log_warn "Unknown task: $task"
-            return 1
-            ;;
-    esac
-}
-
-# Suggest tool installation options (respects user choice and environment)
-suggest_tool_installation() {
-    local missing_tools=("${@}")
-    local platform
-    platform=$(detect_platform)
-    
-    if [[ ${#missing_tools[@]} -eq 0 ]]; then
-        return 0
-    fi
-    
-    echo
-    log_info "Missing modern tools detected. Installation suggestions:"
-    echo
-    
-    case "$platform" in
-        macos)
-            if command -v brew >/dev/null 2>&1; then
-                log_info "📦 Homebrew available - suggested commands:"
-                for tool in "${missing_tools[@]}"; do
-                    local install_cmd
-                    install_cmd=$(get_tool_info "$tool" install 2>/dev/null || echo "Check tool documentation")
-                    if [[ "$install_cmd" == *"brew"* ]]; then
-                        log_info "  $install_cmd"
-                    elif [[ "$tool" == "gdu" ]]; then
-                        log_info "  # gdu: Multiple options available"
-                        log_info "  brew install gdu              # Homebrew (recommended)"
-                        log_info "  go install github.com/dundee/gdu@latest  # Go toolchain"
-                    elif [[ "$tool" == "bat" ]]; then
-                        log_info "  # bat: Multiple options available"
-                        log_info "  brew install bat              # Homebrew"
-                        log_info "  cargo install bat            # Rust toolchain (recommended)"
-                    else
-                        log_info "  $install_cmd"
-                    fi
-                done
-            else
-                log_info "💡 Consider installing Homebrew for easier tool management:"
-                log_info "  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-            fi
-            ;;
-        linux_*)
-            log_info "🐧 Linux installation suggestions (choose based on your distro):"
-            log_info "  # Debian/Ubuntu:"
-            log_info "  sudo apt update && sudo apt install fd-find ripgrep jq"
-            log_info "  # Fedora/RHEL:"
-            log_info "  sudo dnf install fd-find ripgrep jq"
-            log_info "  # Arch Linux:"
-            log_info "  sudo pacman -S fd ripgrep eza jq"
-            echo
-            log_info "  # Universal options:"
-            log_info "  cargo install bat eza gdu      # Rust toolchain"
-            log_info "  go install github.com/dundee/gdu@latest  # Go toolchain"
-            ;;
-        *)
-            log_info "🔧 Universal installation options:"
-            log_info "  # Rust toolchain (if available):"
-            log_info "  cargo install bat eza gdu ripgrep fd-find"
-            log_info "  # Go toolchain (if available):"
-            log_info "  go install github.com/dundee/gdu@latest"
-            ;;
-    esac
-    
-    echo
-    log_info "💡 Pro tip: Use 'abaddon brew' to manage Homebrew packages safely"
-    log_info "After installation, restart your shell or run: source ~/.bash_env && bash"
-    echo
-}
-
-# Validate development environment
-validate_development_environment() {
-    local platform
-    platform=$(detect_platform)
-    
-    log_info "Validating development environment for $platform..."
-    
-    # Check shell environment
-    if [[ -z "${BASH_VERSION:-}" ]]; then
-        log_warn "Not running in bash - some features may not work"
-    else
-        log_debug "Bash version: $BASH_VERSION"
-        
-        # Check for modern bash features
-        if [[ "${BASH_VERSINFO[0]}" -ge 4 ]]; then
-            log_debug "Modern bash features available"
-        else
-            log_warn "Old bash version - consider upgrading"
-        fi
-    fi
-    
-    # Check PATH configuration
-    if [[ ":$PATH:" == *":$HOME/.local/bin:"* ]]; then
-        log_debug "Local bin directory in PATH"
-    else
-        log_warn "Local bin directory not in PATH"
-    fi
-    
-    # Check for common development tools
-    local dev_tools=("git" "curl" "jq")
-    for tool in "${dev_tools[@]}"; do
-        if check_tool "$tool" true; then
-            log_debug "✓ $tool available"
-        else
-            log_warn "✗ $tool not available"
-        fi
-    done
-    
-    # Platform-specific checks
-    case "$platform" in
-        macos)
-            if check_tool "brew" true; then
-                log_debug "✓ Homebrew available"
-                # Check if homebrew path is in PATH
-                if [[ ":$PATH:" == *":/opt/homebrew/bin:"* ]]; then
-                    log_debug "✓ Homebrew in PATH"
+    case "$os_type" in
+        Linux)
+            # Enhanced Linux variant detection
+            if grep -qi microsoft /proc/version 2>/dev/null; then
+                if grep -qi "WSL2" /proc/version 2>/dev/null; then
+                    detected_type="linux_wsl2"
                 else
-                    log_warn "Homebrew not properly configured in PATH"
+                    detected_type="linux_wsl1"
                 fi
+            elif [[ -f /.dockerenv ]]; then
+                detected_type="linux_docker"
+            elif [[ -f /run/.containerenv ]]; then
+                detected_type="linux_podman"
+            elif [[ -f /etc/os-release ]]; then
+                . /etc/os-release 2>/dev/null
+                detected_type="linux_${ID:-unknown}"
             else
-                log_warn "✗ Homebrew not available - required for modern tools"
+                detected_type="linux_unknown"
             fi
             ;;
-        linux_*)
-            if check_tool "systemctl" true; then
-                log_debug "✓ systemd available"
-            else
-                log_debug "Non-systemd Linux system"
+        Darwin)
+            # macOS version detection
+            local macos_version=""
+            if command -v sw_vers >/dev/null 2>&1; then
+                macos_version=$(sw_vers -productVersion 2>/dev/null | cut -d. -f1-2)
+            fi
+            detected_type="macos${macos_version:+_$macos_version}"
+            ;;
+        CYGWIN*)
+            detected_type="windows_cygwin"
+            ;;
+        MINGW*|MSYS*)
+            detected_type="windows_mingw"
+            ;;
+        FreeBSD)
+            local freebsd_version=$(uname -r | cut -d. -f1)
+            detected_type="freebsd_${freebsd_version}"
+            ;;
+        OpenBSD)
+            detected_type="openbsd"
+            ;;
+        NetBSD)
+            detected_type="netbsd"
+            ;;
+        SunOS)
+            detected_type="solaris"
+            ;;
+        AIX)
+            detected_type="aix"
+            ;;
+        *)
+            detected_type="unknown_${os_type,,}"
+            ;;
+    esac
+    
+    ABADDON_PLATFORM_OS_TYPE="$detected_type"
+    echo "$detected_type"
+}
+
+# Detect OS version with platform-specific methods
+detect_os_version() {
+    local version="unknown"
+    
+    case "$(uname -s)" in
+        Linux)
+            if [[ -f /etc/os-release ]]; then
+                . /etc/os-release 2>/dev/null
+                version="${VERSION_ID:-${VERSION:-unknown}}"
+            elif [[ -f /etc/lsb-release ]]; then
+                . /etc/lsb-release 2>/dev/null
+                version="${DISTRIB_RELEASE:-unknown}"
+            fi
+            ;;
+        Darwin)
+            if command -v sw_vers >/dev/null 2>&1; then
+                version=$(sw_vers -productVersion 2>/dev/null)
+            fi
+            ;;
+        FreeBSD|OpenBSD|NetBSD)
+            version=$(uname -r)
+            ;;
+        CYGWIN*|MINGW*|MSYS*)
+            # Try to get Windows version
+            if command -v wmic >/dev/null 2>&1; then
+                version=$(wmic os get Version /value 2>/dev/null | grep "Version=" | cut -d= -f2 | tr -d '\r\n')
             fi
             ;;
     esac
     
-    return 0
+    ABADDON_PLATFORM_OS_VERSION="$version"
+    echo "$version"
 }
 
-# Show comprehensive tool status
-# Note: This is user-requested display output, so it goes to stdout (not stderr logging)
-show_tool_status() {
-    local show_all="${1:-false}"
+# Detect system architecture with enhanced classification
+detect_architecture() {
+    local arch=$(uname -m)
+    local detected_arch=""
     
-    echo -e "${ABADDON_CORE_COLOR_BOLD}=== Modern Tool Status ===${ABADDON_CORE_COLOR_NC}\n"
+    case "$arch" in
+        x86_64|amd64)
+            detected_arch="x86_64"
+            ;;
+        i386|i486|i586|i686)
+            detected_arch="x86"
+            ;;
+        arm64|aarch64)
+            detected_arch="arm64"
+            ;;
+        armv7*|armv6*)
+            detected_arch="arm32"
+            ;;
+        aarch64_be|armv8*)
+            detected_arch="arm64"
+            ;;
+        ppc64le)
+            detected_arch="ppc64le"
+            ;;
+        ppc64)
+            detected_arch="ppc64"
+            ;;
+        s390x)
+            detected_arch="s390x"
+            ;;
+        riscv64)
+            detected_arch="riscv64"
+            ;;
+        *)
+            detected_arch="unknown_$arch"
+            ;;
+    esac
     
-    # Core modern tools
-    echo -e "${ABADDON_CORE_COLOR_CYAN}Core Modern Tools:${ABADDON_CORE_COLOR_NC}"
-    for tool in fd rg eza gdu; do
-        if check_tool "$tool" true; then
-            local version capabilities
-            version=$(get_tool_version "$tool")
-            capabilities=$(get_tool_info "$tool" capabilities 2>/dev/null || echo "basic")
-            echo "  ✅ $tool: $version"
-            [[ "$show_all" == "true" ]] && echo "     Capabilities: $capabilities"
-        else
-            local description
-            description=$(get_tool_info "$tool" description 2>/dev/null || echo "Modern development tool")
-            echo "  ⚪ $tool: not available"
-            [[ "$show_all" == "true" ]] && echo "     Description: $description"
-        fi
-    done
+    ABADDON_PLATFORM_ARCHITECTURE="$detected_arch"
+    echo "$detected_arch"
+}
+
+# Comprehensive platform detection (initializes all platform state)
+detect_platform() {
+    clear_platform_state
+    log_debug "Detecting platform information"
     
-    # Optional tools
-    echo -e "\n${ABADDON_CORE_COLOR_CYAN}Optional Tools:${ABADDON_CORE_COLOR_NC}"
-    for tool in bat jq yq; do
-        if check_tool "$tool" true; then
-            local version
-            version=$(get_tool_version "$tool")
-            echo "  ✅ $tool: $version"
-        else
-            echo "  ⚪ $tool: not available (optional)"
-        fi
-    done
+    # Detect all platform components
+    local os_type=$(detect_os_type)
+    local os_version=$(detect_os_version)
+    local architecture=$(detect_architecture)
     
-    # Platform tools
-    if [[ "$show_all" == "true" ]]; then
-        echo -e "\n${ABADDON_CORE_COLOR_CYAN}Platform Tools:${ABADDON_CORE_COLOR_NC}"
-        local platform
-        platform=$(detect_platform)
-        case "$platform" in
-            macos)
-                for tool in brew networksetup; do
-                    if check_tool "$tool" true; then
-                        echo "  ✅ $tool: available"
-                    else
-                        echo "  ❌ $tool: not available"
-                    fi
-                done
-                ;;
-            linux_*)
-                for tool in systemctl xclip; do
-                    if check_tool "$tool" true; then
-                        echo "  ✅ $tool: available"
-                    else
-                        echo "  ⚪ $tool: not available"
-                    fi
-                done
-                ;;
-        esac
+    # Validate detection results
+    if [[ -z "$os_type" || "$os_type" == "unknown_"* ]]; then
+        set_platform_error "Unable to detect OS type reliably"
+        return 1
     fi
+    
+    # Store results and set success
+    ABADDON_PLATFORM_OS_TYPE="$os_type"
+    ABADDON_PLATFORM_OS_VERSION="$os_version"
+    ABADDON_PLATFORM_ARCHITECTURE="$architecture"
+    
+    set_platform_success
+    log_debug "Platform detected: $os_type/$os_version/$architecture"
+    
+    # Return combined platform string for compatibility
+    echo "${os_type}"
 }
 
-# State access functions (following framework pattern)
+# ============================================================================
+# Platform Query Functions
+# ============================================================================
+
+# Check if current platform matches pattern
+is_platform() {
+    local pattern="$1"
+    local current_platform="${ABADDON_PLATFORM_OS_TYPE:-$(detect_os_type)}"
+    
+    case "$pattern" in
+        linux|linux_*)
+            [[ "$current_platform" == linux* ]]
+            ;;
+        macos|darwin)
+            [[ "$current_platform" == macos* ]]
+            ;;
+        windows|win)
+            [[ "$current_platform" == windows* ]]
+            ;;
+        freebsd)
+            [[ "$current_platform" == freebsd* ]]
+            ;;
+        wsl|wsl1|wsl2)
+            [[ "$current_platform" == *wsl* ]]
+            ;;
+        container|docker)
+            [[ "$current_platform" == *docker* || "$current_platform" == *podman* ]]
+            ;;
+        unix)
+            [[ "$current_platform" == linux* || "$current_platform" == macos* || "$current_platform" == freebsd* ]]
+            ;;
+        *)
+            [[ "$current_platform" == "$pattern"* ]]
+            ;;
+    esac
+}
+
+# Get current OS type
+get_os_type() {
+    echo "${ABADDON_PLATFORM_OS_TYPE:-$(detect_os_type)}"
+}
+
+# Get current OS version
+get_os_version() {
+    echo "${ABADDON_PLATFORM_OS_VERSION:-$(detect_os_version)}"
+}
+
+# Get current architecture
+get_architecture() {
+    echo "${ABADDON_PLATFORM_ARCHITECTURE:-$(detect_architecture)}"
+}
+
+# Get platform family (simplified classification)
+get_platform_family() {
+    local os_type="${ABADDON_PLATFORM_OS_TYPE:-$(detect_os_type)}"
+    
+    case "$os_type" in
+        linux*)
+            echo "linux"
+            ;;
+        macos*)
+            echo "macos"
+            ;;
+        windows*)
+            echo "windows"
+            ;;
+        freebsd*|openbsd*|netbsd*)
+            echo "bsd"
+            ;;
+        *)
+            echo "unknown"
+            ;;
+    esac
+}
+
+# ============================================================================
+# Cross-Platform Compatibility Helpers
+# ============================================================================
+
+# Check if platform supports specific features
+platform_supports() {
+    local feature="$1"
+    local os_type="${ABADDON_PLATFORM_OS_TYPE:-$(detect_os_type)}"
+    
+    case "$feature" in
+        systemd)
+            [[ "$os_type" == linux* ]] && command -v systemctl >/dev/null 2>&1
+            ;;
+        homebrew)
+            [[ "$os_type" == macos* ]] && command -v brew >/dev/null 2>&1
+            ;;
+        apt)
+            [[ "$os_type" == linux* ]] && command -v apt >/dev/null 2>&1
+            ;;
+        yum|dnf)
+            [[ "$os_type" == linux* ]] && (command -v dnf >/dev/null 2>&1 || command -v yum >/dev/null 2>&1)
+            ;;
+        launchctl)
+            [[ "$os_type" == macos* ]] && command -v launchctl >/dev/null 2>&1
+            ;;
+        wsl)
+            [[ "$os_type" == *wsl* ]]
+            ;;
+        containers)
+            [[ "$os_type" == *docker* || "$os_type" == *podman* ]]
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Get platform-specific paths
+get_platform_path() {
+    local path_type="$1"
+    local os_type="${ABADDON_PLATFORM_OS_TYPE:-$(detect_os_type)}"
+    
+    case "$path_type" in
+        home)
+            echo "${HOME:-/tmp}"
+            ;;
+        tmp)
+            case "$os_type" in
+                macos*) echo "${TMPDIR:-/tmp}" ;;
+                *) echo "/tmp" ;;
+            esac
+            ;;
+        config)
+            case "$os_type" in
+                macos*) echo "${HOME}/Library/Application Support" ;;
+                *) echo "${XDG_CONFIG_HOME:-$HOME/.config}" ;;
+            esac
+            ;;
+        cache)
+            case "$os_type" in
+                macos*) echo "${HOME}/Library/Caches" ;;
+                *) echo "${XDG_CACHE_HOME:-$HOME/.cache}" ;;
+            esac
+            ;;
+        data)
+            case "$os_type" in
+                macos*) echo "${HOME}/Library/Application Support" ;;
+                *) echo "${XDG_DATA_HOME:-$HOME/.local/share}" ;;
+            esac
+            ;;
+        bin)
+            case "$os_type" in
+                macos*) 
+                    if [[ -d "/opt/homebrew/bin" ]]; then
+                        echo "/opt/homebrew/bin"
+                    else
+                        echo "/usr/local/bin"
+                    fi
+                    ;;
+                *) echo "${HOME}/.local/bin" ;;
+            esac
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# ============================================================================
+# Environment Analysis
+# ============================================================================
+
+# Get basic system resource information (non-intrusive)
+get_system_resources() {
+    local resources=()
+    local os_type="${ABADDON_PLATFORM_OS_TYPE:-$(detect_os_type)}"
+    
+    case "$os_type" in
+        linux*)
+            # CPU cores
+            if [[ -r /proc/cpuinfo ]]; then
+                local cores=$(nproc 2>/dev/null || grep -c "^processor" /proc/cpuinfo 2>/dev/null || echo "unknown")
+                resources+=("cpu_cores:$cores")
+            fi
+            
+            # Memory (in GB)
+            if [[ -r /proc/meminfo ]]; then
+                local mem_kb=$(grep "MemTotal:" /proc/meminfo 2>/dev/null | awk '{print $2}')
+                if [[ -n "$mem_kb" && "$mem_kb" != "0" ]]; then
+                    local mem_gb=$((mem_kb / 1024 / 1024))
+                    resources+=("memory_gb:$mem_gb")
+                fi
+            fi
+            ;;
+        macos*)
+            # CPU cores
+            local cores=$(sysctl -n hw.ncpu 2>/dev/null || echo "unknown")
+            resources+=("cpu_cores:$cores")
+            
+            # Memory (in GB)
+            local mem_bytes=$(sysctl -n hw.memsize 2>/dev/null || echo "0")
+            if [[ "$mem_bytes" != "0" ]]; then
+                local mem_gb=$((mem_bytes / 1024 / 1024 / 1024))
+                resources+=("memory_gb:$mem_gb")
+            fi
+            ;;
+    esac
+    
+    echo "${resources[@]}"
+}
+
+# Check if running in constrained environment
+is_constrained_environment() {
+    local os_type="${ABADDON_PLATFORM_OS_TYPE:-$(detect_os_type)}"
+    
+    # Container environments
+    [[ "$os_type" == *docker* || "$os_type" == *podman* ]] && return 0
+    
+    # WSL1 (more constrained than WSL2)
+    [[ "$os_type" == *wsl1* ]] && return 0
+    
+    # Check for very limited resources
+    local resources=($(get_system_resources))
+    for resource in "${resources[@]}"; do
+        if [[ "$resource" == memory_gb:* ]]; then
+            local mem_gb="${resource#memory_gb:}"
+            # Less than 2GB is considered constrained
+            [[ "$mem_gb" != "unknown" && "$mem_gb" -lt 2 ]] && return 0
+        fi
+    done
+    
+    return 1
+}
+
+# ============================================================================
+# State Access Functions
+# ============================================================================
+
 get_platform_error_message() { echo "$ABADDON_PLATFORM_ERROR_MESSAGE"; }
-get_platform_tool_counts() { echo "$ABADDON_PLATFORM_TOOL_COUNTS"; }
-get_platform_available_tools() { echo "$ABADDON_PLATFORM_AVAILABLE_TOOLS"; }
-get_platform_missing_tools() { echo "$ABADDON_PLATFORM_MISSING_TOOLS"; }
 
 # Check if last operation succeeded
 platform_succeeded() { [[ "$ABADDON_PLATFORM_STATUS" == "$ABADDON_PLATFORM_SUCCESS" ]]; }
 platform_failed() { [[ "$ABADDON_PLATFORM_STATUS" == "$ABADDON_PLATFORM_ERROR" ]]; }
+
+# ============================================================================
+# Module Validation and Information
+# ============================================================================
 
 # Module validation function (required by framework)
 platform_validate() {
@@ -617,8 +547,8 @@ platform_validate() {
     
     # Check required functions exist
     local required_functions=(
-        "check_tool" "get_tool_info" "check_tool_availability"
-        "set_platform_error" "set_platform_success" "clear_platform_state"
+        "detect_platform" "detect_os_type" "detect_architecture" "is_platform"
+        "get_os_type" "get_os_version" "get_architecture" "platform_supports"
     )
     
     for func in "${required_functions[@]}"; do
@@ -631,8 +561,7 @@ platform_validate() {
     # Check state variables exist
     local required_vars=(
         "ABADDON_PLATFORM_STATUS" "ABADDON_PLATFORM_ERROR_MESSAGE"
-        "ABADDON_PLATFORM_TOOL_COUNTS" "ABADDON_PLATFORM_AVAILABLE_TOOLS"
-        "ABADDON_PLATFORM_MISSING_TOOLS"
+        "ABADDON_PLATFORM_OS_TYPE" "ABADDON_PLATFORM_OS_VERSION" "ABADDON_PLATFORM_ARCHITECTURE"
     )
     
     for var in "${required_vars[@]}"; do
@@ -651,4 +580,22 @@ platform_validate() {
     return $errors
 }
 
-log_debug "Abaddon Platform module loaded successfully with standardized state management"
+# Module information
+platform_info() {
+    echo "Abaddon Platform - Core platform services and OS detection"
+    echo "Version: 2.0.0 - Enhanced for adaptive architecture"
+    echo "Features: OS detection, platform classification, resource analysis"
+    echo "Dependencies: core.sh"
+    echo "Main Functions:"
+    echo "  detect_platform() - Comprehensive platform detection"
+    echo "  is_platform(pattern) - Platform pattern matching"
+    echo "  platform_supports(feature) - Feature availability checking"
+    echo "  get_platform_path(type) - Platform-specific path resolution"
+}
+
+# Initialize platform detection on module load
+if ! detect_platform >/dev/null; then
+    log_warn "Platform detection failed, some features may not work correctly"
+fi
+
+log_debug "Abaddon Platform module loaded successfully - core services active"

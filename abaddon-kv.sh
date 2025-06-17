@@ -25,8 +25,8 @@ readonly ABADDON_KV_LOADED=1
     return 1
 }
 
-[[ -n "${ABADDON_VALIDATION_LOADED:-}" ]] || {
-    echo "ERROR: abaddon-kv.sh requires abaddon-validation.sh to be loaded first" >&2
+[[ -n "${ABADDON_SECURITY_LOADED:-}" ]] || {
+    echo "ERROR: abaddon-kv.sh requires abaddon-security.sh to be loaded first" >&2
     return 1
 }
 
@@ -312,7 +312,7 @@ execute_cached_extraction() {
         return 0
     else
         local validation_error
-        validation_error=$(get_validation_error)
+        validation_error=$(get_security_error)
         set_kv_error "Extraction failed: $validation_error"
         return 1
     fi
@@ -342,7 +342,7 @@ get_config_value() {
     # Validate file path
     if ! validate_file_exists "$file_path"; then
         local validation_error
-        validation_error=$(get_validation_error)
+        validation_error=$(get_security_error)
         set_kv_error "File validation failed: $validation_error"
         return 1
     fi
@@ -522,7 +522,7 @@ validate_config_file() {
     # Validate file exists
     if ! validate_file_exists "$file_path"; then
         local validation_error
-        validation_error=$(get_validation_error)
+        validation_error=$(get_security_error)
         set_kv_error "Config file validation failed: $validation_error"
         return 1
     fi
@@ -549,7 +549,7 @@ validate_config_file() {
                 return 0
             else
                 local validation_error
-                validation_error=$(get_validation_error)
+                validation_error=$(get_security_error)
                 set_kv_error "JSON schema validation failed: $validation_error"
                 return 1
             fi
@@ -559,7 +559,7 @@ validate_config_file() {
                 return 0
             else
                 local validation_error
-                validation_error=$(get_validation_error)
+                validation_error=$(get_security_error)
                 set_kv_error "JSON validation failed: $validation_error"
                 return 1
             fi
@@ -571,7 +571,7 @@ validate_config_file() {
             return 0
         else
             local validation_error
-            validation_error=$(get_validation_error)
+            validation_error=$(get_security_error)
             set_kv_error "YAML validation failed: $validation_error"
             return 1
         fi
@@ -582,7 +582,7 @@ validate_config_file() {
             return 0
         else
             local validation_error
-            validation_error=$(get_validation_error)
+            validation_error=$(get_security_error)
             set_kv_error "TOML validation failed: $validation_error"
             return 1
         fi
@@ -593,7 +593,7 @@ validate_config_file() {
             return 0
         else
             local validation_error
-            validation_error=$(get_validation_error)
+            validation_error=$(get_security_error)
             set_kv_error "XML validation failed: $validation_error"
             return 1
         fi
@@ -687,8 +687,8 @@ kv_validate() {
         ((errors++))
     fi
 
-    if [[ -z "${ABADDON_VALIDATION_LOADED:-}" ]]; then
-        log_error "Validation dependency not loaded"
+    if [[ -z "${ABADDON_SECURITY_LOADED:-}" ]]; then
+        log_error "Security dependency not loaded"
         ((errors++))
     fi
 
